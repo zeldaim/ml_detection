@@ -38,7 +38,9 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `tools/make_sample.py` | 위 합성 샘플 생성기 (`python tools/make_sample.py samples/sample_alerts_if.json`) |
 | `docs/01_Wazuh_ML_실습_런북.md` | 랩 구축 런북 (Wazuh 경량화, 공격 재현, 로그 확장, 자동 차단) |
 | `docs/02_Isolation_Forest_개념정리.md` | 쉬운 개념 설명, 오해 정리, 지표 추가 규칙, ML vs LLM |
-| `docs/03_ML_vs_LLM_비교실험_계획.md` | 후속 실험 계획 — 모니터링 지표 추가·클라우드 확장 분석 포함 |
+| `docs/03_ML_vs_LLM_비교실험_계획.md` | 후속 실험 계획 — 룰·ML·LLM·조합 비교, 모니터링 지표·클라우드 분석, 자동 대응 LLM 도입 |
+| `docs/04_SOAR_구현계획.md` | SOAR 구현 계획 — 수집·보강·판단·조치·기록 자동화, 플레이북, LLM 안전장치 |
+| `docs/_이전버전/` | 수정 전 문서 보관 |
 
 ## 사용 피처
 
@@ -48,6 +50,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 
 - Prometheus + node_exporter로 **모니터링 지표**를 추가해 "로그만 vs 로그+지표" 비교
 - 룰 · ML · LLM · ML+LLM 4방식 비교 실험 (`docs/03`)
+- SOAR로 탐지 이후 대응 자동화 (`docs/04`)
 - (선택) 클라우드 환경 재현
 
 ## 주의
