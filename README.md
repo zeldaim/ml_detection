@@ -46,6 +46,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/04_SOAR_구현계획.md` | SOAR 구현 계획 — 수집·보강·판단·조치·기록 자동화, 플레이북, LLM 안전장치 |
 | `docs/05_데이터전략_시나리오_팀분담.md` | 공개 데이터 + 우리 공격 데이터 결합 전략, 추천 시나리오 4개, 1인 1서버 분담·공통 형식 |
 | `docs/06_기존자산_연계계획.md` | 기존 Home SOC Lab·커스텀 룰·Slack Alert Bot·엔트로피 연구를 프로젝트에 잇는 계획, 수정된 진행 순서 |
+| `docs/07_쇼핑몰API_공공데이터_계획.md` | **현재 메인 컨셉** — 쇼핑몰 API 이상행위 탐지(CSIC 2010 + 직접 생성 BOLA), 2층 탐지, 항공사 챗봇 확장, 3주 일정 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
 | `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
 
