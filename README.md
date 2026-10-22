@@ -10,6 +10,10 @@ Kali 공격 ──► Wazuh 매니저 ──► alerts.json ──► detector/w
                                                  (IP별 피처 → Isolation Forest)
 ```
 
+## 처음이라면
+
+**Wazuh 없이 노트북에서 바로** 해볼 수 있는 실습부터: [`labs/01_공개데이터_SSH_랩/`](labs/01_공개데이터_SSH_랩/README.md) — 공개 SSH 로그에 우리 사건을 섞고, 룰·ML·LLM이 각각 무엇을 잡고 놓치는지 확인한다.
+
 ## 빠른 실행
 
 ```bash
@@ -42,6 +46,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/04_SOAR_구현계획.md` | SOAR 구현 계획 — 수집·보강·판단·조치·기록 자동화, 플레이북, LLM 안전장치 |
 | `docs/05_데이터전략_시나리오_팀분담.md` | 공개 데이터 + 우리 공격 데이터 결합 전략, 추천 시나리오 4개, 1인 1서버 분담·공통 형식 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
+| `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
 
 ## 사용 피처
 
