@@ -133,7 +133,7 @@ python step4_llm.py data/results.json --mode raw --ip 203.0.113.99 --no-guard   
 ```
 
 - `anthropic`이 설치돼 있고 자격증명(`ANTHROPIC_API_KEY` 또는 `ant auth login`)이 있으면 Claude API를 호출해 결과를 표로 보여준다. 호출할 때마다 요금이 든다.
-- 없으면 **프롬프트를 출력**한다 → claude.ai에 붙여넣어 결과를 받아 보면 된다.
+- `anthropic`이 없거나, 설치돼 있어도 **API 키가 없거나 틀리면** 이유를 알려주고 **프롬프트를 출력**한다 → claude.ai에 붙여넣어 결과를 받아 보면 된다.
 
 | 비교 | 보는 것 |
 |---|---|

@@ -6,7 +6,7 @@ ML이 고른 상위 후보를 요약해 LLM에게 주고 block_30m / observe / i
   --mode numbers   : 숫자 요약만 전달 (안전한 방식)
   --mode raw       : 계정 이름(공격자가 쓸 수 있는 칸)까지 그대로 전달 (위험한 방식)
 
-anthropic SDK와 자격증명이 있으면 Claude API를 호출하고, 없으면 프롬프트를 출력한다.
+anthropic SDK와 자격증명이 있으면 Claude API를 호출하고, SDK가 없거나 자격증명이 없거나 틀리면 프롬프트를 출력한다.
 출력된 프롬프트를 claude.ai 등에 붙여넣어 결과를 비교해도 된다.
 
 사용:
@@ -102,22 +102,35 @@ def main():
     picked, prompt = build_prompt(results, args.mode, args.top, args.ip)
     system = SYSTEM if args.no_guard else SYSTEM + GUARD
 
-    try:
-        import anthropic  # noqa: F401
-    except ImportError:
-        print("anthropic 미설치 → API 대신 프롬프트를 출력합니다. (설치: pip install anthropic)\n")
+    def print_prompt(why):
+        print(why + " → API 대신 프롬프트를 출력합니다.\n")
         print("=== 시스템 지시 ===\n" + system + "\n\n=== 사용자 메시지 ===\n" + prompt)
         print("\n위 두 부분을 claude.ai에 붙여넣고, IP마다 block_30m/observe/ignore와 이유를 받아 보세요.")
+
+    try:
+        import anthropic
+    except ImportError:
+        print_prompt("anthropic 미설치 (설치: pip install anthropic)")
         return
 
-    out = call_claude(system, prompt)
+    try:
+        out = call_claude(system, prompt)
+    except anthropic.AuthenticationError:
+        print_prompt("API 키가 올바르지 않음 (ANTHROPIC_API_KEY 확인)")
+        return
+    except TypeError as e:
+        # 자격증명이 하나도 없으면 SDK가 요청 전에 TypeError를 낸다
+        if "authentication" not in str(e).lower():
+            raise
+        print_prompt("API 자격증명 없음 (ANTHROPIC_API_KEY 설정 또는 `ant auth login`)")
+        return
+
     truth = {r["ip"]: (r["truth"], r["truth_type"]) for r in picked}
-    print(f"[모드: {args.mode}]\n")
+    print(f"[모드: {args.mode}, 방어 문장: {'없음' if args.no_guard else '있음'}]\n")
     for d in out["decisions"]:
         t = truth.get(d["ip"], ("", ""))
         mark = f"  ← 정답: {t[0]} ({t[1]})" if t[0] else ""
         print(f"{d['ip']:<16} {d['verdict']:<10} {d['reason']}{mark}")
-
 
 if __name__ == "__main__":
     main()
