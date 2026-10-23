@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""피처 표 → 비지도 이상탐지 비교: Z-score · Isolation Forest · LOF · One-Class SVM.  (docs/10 §3-1·3-2)
+"""피처 표 → 룰 비교군 + 비지도 이상탐지 비교: 룰 · Z-score · Isolation Forest · LOF · One-Class SVM.
+(docs/10 §3-1·3-2, docs/07 §6 ①②)
 
   학습(fit) : --train-until 이전 구간 = 정상 수집 기간(docs/08 §3). 없으면 전체로 fit하고 같은 데이터에 점수
   점수     : 모든 방법을 "클수록 이상"으로 통일해 detections CSV에 쓴다
 
+  rule    : ML이 아닌 비교군 (docs/07 ①). 웹 피처가 있으면 레이트리밋 "1분에 N회 이상",
+            alerts 피처가 있으면 Wazuh 룰 레벨 --rule-level(기본 10) 이상 (docs/03 §3-1). 둘 다 있으면 어느 하나
+            N은 --rule-rpm, 없으면 정상 기간 1분 최대 요청 수 × 1.5 (학습 구간이 전체면 60)
   zscore  : 정상 기간의 중앙값·MAD로 robust Z, 피처 중 최대 |z| ≥ --z 이면 이상
   iforest : 무작위 분할로 빨리 고립되는 점 (스케일링 불필요)
   lof     : 이웃보다 밀도가 낮은 점 (스케일링 필요)
@@ -20,7 +24,7 @@ import os
 import sys
 from datetime import datetime
 
-METHODS = ["zscore", "iforest", "lof", "ocsvm"]
+METHODS = ["rule", "zscore", "iforest", "lof", "ocsvm"]
 
 
 def parse_utc(s: str) -> datetime:
@@ -35,6 +39,30 @@ def robust_z(X_train, X):
     std = X_train.std(axis=0)
     denom = np.where(mad > 0, mad, np.where(std > 0, std, 1.0))
     return np.abs((X - med) / denom).max(axis=1)
+
+
+def run_rule(rows, in_train, train_is_all, args):
+    """룰 비교군. (점수: 임계값 대비 비율, 이상 여부, 설명) 반환."""
+    import math
+    import numpy as np
+    scores, notes = np.zeros(len(rows)), []
+    if "max_req_1min" in rows[0]:
+        rpm = np.array([float(r["max_req_1min"] or 0) for r in rows])
+        if args.rule_rpm:
+            limit = args.rule_rpm
+        elif train_is_all:
+            limit = 60
+        else:
+            limit = max(1, math.ceil(rpm[in_train].max() * 1.5))
+        scores = np.maximum(scores, rpm / limit)
+        notes.append(f"레이트리밋 1분 {limit:g}회 이상")
+    if "rule_level_max" in rows[0]:
+        lvl = np.array([float(r["rule_level_max"] or 0) for r in rows])
+        scores = np.maximum(scores, lvl / args.rule_level)
+        notes.append(f"Wazuh 룰 레벨 {args.rule_level} 이상")
+    if not notes:
+        return None
+    return scores, scores >= 1.0, " 또는 ".join(notes)
 
 
 def run(method, X_train, X, args, train_is_all):
@@ -80,6 +108,8 @@ def main():
     ap.add_argument("--contamination", type=float, default=0.1, help="iforest·lof 이상 비율 (기본 0.1)")
     ap.add_argument("--nu", type=float, default=0.1, help="ocsvm 경계 밖 허용 비율 (기본 0.1)")
     ap.add_argument("--z", type=float, default=3.0, help="zscore 임계값 (기본 3)")
+    ap.add_argument("--rule-rpm", type=float, help="rule: 1분 요청 수 임계값 (기본: 정상 기간 최대 × 1.5)")
+    ap.add_argument("--rule-level", type=int, default=10, help="rule: Wazuh 룰 레벨 임계값 (기본 10)")
     ap.add_argument("--drop", nargs="*", default=[], help="모델에서 뺄 피처")
     ap.add_argument("--out", default="data/detections.csv")
     args = ap.parse_args()
@@ -107,7 +137,15 @@ def main():
 
     out = []
     for method in args.methods:
-        scores, flags = run(method, X[in_train], X, args, train_is_all)
+        if method == "rule":
+            res = run_rule(rows, in_train, train_is_all, args)
+            if res is None:
+                print("[rule   ] 룰에 쓸 피처(max_req_1min / rule_level_max)가 없어 건너뜀")
+                continue
+            scores, flags, note = res
+            print(f"[rule   ] 기준: {note}")
+        else:
+            scores, flags = run(method, X[in_train], X, args, train_is_all)
         flagged = [(float(s), r["ip"], r["window_start"]) for s, f, r in zip(scores, flags, rows) if f]
         ips = sorted({ip for _, ip, _ in flagged})
         print(f"[{method:<7}] 이상 구간 {len(flagged)}개 · IP {len(ips)}개: {', '.join(ips) or '-'}")

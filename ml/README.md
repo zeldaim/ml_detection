@@ -1,19 +1,19 @@
 # ml/ — 행위 층 이상탐지 (피처 → 모델 비교 → 채점)
 
-> 계획: `docs/10` §3 · 메인 컨셉: `docs/07` §5 행위 층 · 입력 로그: `docs/08` 환경의 alerts.json / archives.json
+> 계획: `docs/10` §3 · 메인 컨셉: `docs/07` §5 행위 층 · 입력 로그: `docs/08` 환경의 alerts.json / archives.json, **또는 Wazuh 없이 nginx access.log 직접**
 > 의존성: scikit-learn (numpy 포함). pandas 불필요.
 
 ```
-alerts.json / archives.json ─▶ features.py ─▶ 피처 CSV ─▶ models.py ─▶ detections CSV ─┬─▶ evaluate.py ─▶ P/R/F1
-                                (IP × 5분)                (zscore·iforest·lof·ocsvm)       │   (정답지)
+alerts / archives / access.log ─▶ features.py ─▶ 피처 CSV ─▶ models.py ─▶ detections CSV ─┬─▶ evaluate.py ─▶ P/R/F1
+                                (IP × 5분)          (rule·zscore·iforest·lof·ocsvm)        │   (정답지)
                                                                                            └─▶ explain_llm.py ─▶ 추천·설명
                                                                                                (상위 후보, 숫자 요약만)
 ```
 
 | 파일 | 역할 |
 |---|---|
-| `features.py` | 로그 → IP × 구간 피처 표. alerts는 룰 알럿 피처, archives는 nginx 접근 로그·sshd 실패 피처 |
-| `models.py` | 같은 피처 표로 Z-score(robust) · Isolation Forest · LOF · One-Class SVM 실행, 점수는 모두 "클수록 이상" |
+| `features.py` | 로그 → IP × 구간 피처 표. alerts는 룰 알럿 피처, archives·nginx는 웹 요청 피처. `.gz`도 읽음 |
+| `models.py` | 같은 피처 표로 **룰 비교군**(레이트리밋 / Wazuh 레벨 10+) · Z-score(robust) · Isolation Forest · LOF · One-Class SVM 실행, 점수는 모두 "클수록 이상" |
 | `evaluate.py` | 정답지로 구간 단위·IP 단위 TP/FP/FN/TN, Precision/Recall/F1, 공격별 탐지 여부 |
 | `explain_llm.py` | 한 방법의 이상 점수 상위 N개 구간을 **숫자 요약**(피처 값 + 평소 중앙값 + 다른 방법 일치 여부)으로 LLM에 보내 block_30m / observe / ignore 추천과 이유를 받음 |
 
@@ -34,6 +34,11 @@ python ml/evaluate.py data/det_archives.csv --answer data/answer.csv
 python ml/explain_llm.py data/detections.csv data/features_alerts.csv --method lof --top 5 --answer samples/sample_answer_if.csv
 python ml/explain_llm.py data/detections.csv data/features_alerts.csv --dry-run   # 프롬프트만
 
+# Wazuh 없이: 웹서버의 nginx 로그를 직접 (로테이션된 .gz 포함, 오래된 것부터)
+python ml/features.py --nginx access.log.2.gz --nginx access.log.1 --nginx access.log --out data/features_web.csv
+python ml/models.py data/features_web.csv --train-until 2026-11-03T09:00:00Z --out data/det_web.csv
+python ml/evaluate.py data/det_web.csv --answer data/answer.csv
+
 # 09 Q12 비교: 같은 기간을 --alerts만으로도 만들어 같은 모델·같은 정답지로
 python ml/features.py --alerts alerts.json --out data/features_alerts.csv
 ```
@@ -46,7 +51,8 @@ Windows에서 글자가 깨지면 `$env:PYTHONUTF8=1`(PowerShell) 후 실행. �
 |---|---|---|
 | alerts | `alert_count` · `rule_level_max` · `uniq_rules` | 알럿 수 · 최고 룰 레벨 · 서로 다른 룰 수 |
 | | `auth_fail` · `uniq_users` | 인증 실패 그룹 알럿 수 · 서로 다른 계정 수 |
-| archives (nginx) | `req_count` · `uniq_paths` | 요청 수 · 서로 다른 (메서드, 경로 템플릿) 수 |
+| 웹 (archives / nginx) | `req_count` · `uniq_paths` | 요청 수 · 서로 다른 (메서드, 경로 템플릿) 수 |
+| | `max_req_1min` | 구간 안 1분 단위 최대 요청 수 — 룰(레이트리밋) 비교군이 쓰는 값 |
 | | `uniq_objects` | 경로 속 숫자 조각(객체 ID)의 서로 다른 수 — BOLA 징후 |
 | | `err_ratio` · `write_ratio` | 4xx·5xx 비율 · POST/PUT/PATCH/DELETE 비율 |
 | | `interval_cv` | 요청 간격 표준편차 ÷ 평균 (0에 가까울수록 기계적). 간격 2개 미만이면 1.0(중립) |
@@ -56,6 +62,28 @@ Windows에서 글자가 깨지면 `$env:PYTHONUTF8=1`(PowerShell) 후 실행. �
 - 경로 템플릿: `/rest/basket/3` → `/rest/basket/{id}` (숫자 경로 조각을 `{id}`로)
 - nginx 줄의 시각은 **로그 원문 시각**을 쓴다 (Wazuh 수집 시각 아님)
 - 분석 주체는 출발지 IP (`docs/10` §2-2 "왜 nginx 로그엔 계정이 없나")
+
+## 룰 비교군 (`--methods rule`)
+
+ML과 같은 채점표에 넣는 "기존 방어" 기준선 (`docs/07` §6 ①). Wazuh가 없어도 룰 vs ML 비교가 유지된다.
+
+| 입력 | 룰 | 임계값 |
+|---|---|---|
+| 웹 (archives / nginx) | 레이트리밋: 구간 안 어느 1분이라도 요청 N회 이상 | `--rule-rpm`. 없으면 **정상 기간 1분 최대 × 1.5** (운영자가 평소 최대치에 여유를 두고 정하는 방식) |
+| alerts | Wazuh 룰 레벨 10 이상 (`docs/03` §3-1) | `--rule-level` |
+
+## ⚠️ 정상만 있어도 ML은 일정 비율을 "이상"으로 표시한다
+
+정상 브라우징만 담은 테스트 로그(8 IP, 3시간)로 확인한 결과 (2026-10-23):
+
+| 방법 | 학습 구간(정상) | 평가 구간(정상) |
+|---|---|---|
+| rule (1분 11회) | 0 | 0 |
+| iforest (contamination 0.1) | 19 / 191 (10%) | 17 / 96 (18%) |
+
+- `contamination=0.1`은 "학습 데이터의 10%를 이상으로 보라"는 **임계값 설정**이다 → 공격이 없어도 그만큼 경보가 난다
+- 그래서 **정상 기간만으로 오탐률을 먼저 재고**, 실험 결과에는 "공격 구간 탐지율"과 함께 "정상 구간 오탐률"을 반드시 같이 쓴다
+- 운영에 가까이 가려면 contamination을 낮추거나(예: 0.01), 여러 방법이 함께 이상으로 본 구간만 경보로 삼는다(`explain_llm.py`가 보여주는 "이상으로 본 방법")
 
 ## 정답지 형식
 
