@@ -106,9 +106,10 @@ class Win:
                 self.sqli, round(interval_cv(self.ts), 4)]
 
 
-def parse(path, win_sec, stats=None):
+def parse(path, win_sec, stats=None, force_host=None):
     """general log → {(host, window_start): Win}. Connect 줄로 연결 id→host 매핑.
-    stats(dict)를 주면 파싱 커버리지를 채운다: total/connect/query/cont/unparsed/samples."""
+    stats(dict)를 주면 파싱 커버리지를 채운다: total/connect/query/cont/unparsed/samples.
+    force_host를 주면 모든 쿼리를 그 식별자 하나로 묶는다(옵션 C: DB 티어 전체 단위)."""
     conn_host = {}
     windows = defaultdict(Win)
     last = None  # (host, cmd, ts) 이어지는 줄 처리용
@@ -137,7 +138,7 @@ def parse(path, win_sec, stats=None):
                 if stats is not None:
                     stats["connect"] += 1
                 continue
-            host = conn_host.get(cid, cid)   # 매핑 없으면 연결 id를 식별자로
+            host = force_host or conn_host.get(cid, cid)   # force_host면 전부 한 식별자로(티어 단위)
             windows[(host, int(t // win_sec * win_sec))].add(t, cmd, arg)
             last = (host, cmd, t)
             if stats is not None:

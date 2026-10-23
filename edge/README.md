@@ -19,6 +19,7 @@
 |---|---|
 | `edge_agent.py` | 호스트에서 돈다. `--kind web`(nginx) / `--kind db`(MySQL) → 피처 벡터를 collector로 전송 |
 | `db_features.py` | **MySQL general query log → DB 피처** (BOLA·SQLi·대량수집·AI 간격). 원본 쿼리는 숫자로만 요약 |
+| `correlate.py` | **출발지 귀속**(docs/14 §4): `--mode tier`(DB 티어 전체 단위) / `--mode join`(웹-DB 시간 상관으로 웹 IP에 db_* 피처 결합) |
 | `collector.py` | 중앙 수신·판정·적재. 웹 벡터는 `.joblib`로, DB 벡터는 임시 규칙으로 1차 경보 |
 
 ## DB 피처 (db_features.py) — DB 보안 관점

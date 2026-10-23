@@ -74,6 +74,20 @@ docker exec shopdb sh -c 'cat $(mysql -uroot -plabpass -N -e "SELECT @@general_l
 
 프로젝트 규모 권장: **C로 시작**(DB 티어 이상 탐지)하고, 여유되면 **A**(웹-DB 시간 상관)로 출발지까지. B는 앱을 고칠 수 있을 때.
 
+**구현됨 — `edge/correlate.py`** (옵션 A·C 둘 다, 출력은 ml/ 파이프라인 그대로 받는 형식):
+
+```bash
+# 옵션 C: DB 티어 전체 단위 (구간별 1행, 정답지 src도 티어 id로 변환)
+python edge/correlate.py --mode tier --db data/general_real.log     --out data/features_tier.csv --answer data/answer_db.csv --answer-out data/answer_tier.csv
+python ml/supervised.py data/features_tier.csv --answer data/answer_tier.csv --group-by type --contamination 0.05
+
+# 옵션 A: 웹-DB 시간 상관 (웹 IP 행에 같은 구간 DB 집계 db_* 추가)
+python edge/correlate.py --mode join --web data/nginx.log --db data/general_real.log --out data/features_webdb.csv
+python ml/supervised.py data/features_webdb.csv --answer data/answer.csv --group-by type --contamination 0.05
+```
+
+합성으로 동작 확인(2026-10-24): C는 구간별 티어 판정(티어로 뭉쳐 오탐↑, 출발지 해상도 포기의 트레이드오프), A는 웹 9 + db_ 8 = 17 피처 결합(겹치는 구간에 DB 집계가 붙음). 실제 로그로 같은 명령 재실행.
+
 ## 5. 재검증 실행 (파서 점검 → 피처 → 학습 → 비교)
 
 ```bash
