@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 .omc/
 data/
+
+# 엣지 적재 스풀
+edge/spool*.jsonl

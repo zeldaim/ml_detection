@@ -62,6 +62,19 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 
 `alerts` · `rule_level_max` · `uniq_rules` · `auth_fail` · `uniq_users` · `uniq_agents` · `burst_entropy`(요청 간격 엔트로피, 낮을수록 기계적) · `dns_qcount` · `dns_name_ent`(도메인 문자 엔트로피) · `sslvpn_fail`
 
+## 자동 수집·판정 (수동으로 로그 주지 않고)
+
+| 방식 | 디렉토리 | 설명 |
+|---|---|---|
+| 단순 소비자 | `consumer/` | 한 호스트가 원본 로그를 읽어 저장모델로 반복 판정 |
+| **엣지 + DB** | `edge/` | 각 호스트가 피처 벡터만 중앙 collector로 전송(원본 로그 안 나감). MySQL general log → BOLA·SQLi DB 피처 포함 |
+
+```bash
+python consumer/consumer.py --nginx <로그> --model models/model.joblib --interval 60      # 단순
+python edge/collector.py --model models/model.joblib --port 8000                           # 엣지(중앙)
+python edge/edge_agent.py --kind db --log <mysql log> --collector http://<중앙>:8000        # 엣지(DB 호스트)
+```
+
 ## 다음 단계
 
 - Prometheus + node_exporter로 **모니터링 지표**를 추가해 "로그만 vs 로그+지표" 비교
