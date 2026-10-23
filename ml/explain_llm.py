@@ -56,7 +56,7 @@ SCHEMA = {
 FEATURE_KO = {
     "alert_count": "알럿 수", "rule_level_max": "최고 룰 레벨", "uniq_rules": "서로 다른 룰 수",
     "auth_fail": "인증 실패 수", "uniq_users": "서로 다른 계정 수",
-    "req_count": "요청 수", "uniq_paths": "서로 다른 경로 수", "uniq_objects": "서로 다른 객체 ID 수",
+    "req_count": "요청 수", "uniq_paths": "서로 다른 경로 수", "uniq_objects": "서로 다른 소유 자원(장바구니 등) ID 수",
     "err_ratio": "오류 응답 비율", "write_ratio": "쓰기 요청 비율",
     "interval_cv": "요청 간격 변동계수(0에 가까울수록 기계적)",
     "endpoint_entropy": "경로 분포 엔트로피", "ssh_fail": "SSH 실패 수",

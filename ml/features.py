@@ -45,6 +45,10 @@ SSH_FAIL_RE = re.compile(r"sshd\[\d+\]: (?:Failed password|Invalid user)")
 SSH_IP_RE = re.compile(r"from (\d{1,3}(?:\.\d{1,3}){3})")
 NUM_SEG_RE = re.compile(r"/(\d+)(?=/|$)")
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# uniq_objects는 "주인만 봐야 하는 자원"의 ID만 센다 (BOLA 징후). 상품처럼 공개 자원은 제외 —
+# 정상 쇼핑객이 상품을 많이 보면 공격자와 구분이 안 되기 때문. 경로 템플릿 접두어, --owned-path로 교체 가능.
+OWNED_PREFIXES = ["/rest/basket/{id}", "/api/BasketItems/{id}", "/api/Users/{id}",
+                  "/api/Cards/{id}", "/api/Addresss/{id}"]
 
 
 def open_text(path):
@@ -82,6 +86,11 @@ def path_template(path: str):
     """'/rest/basket/6?x=1' → ('/rest/basket/{id}', ['6']). 숫자 경로 조각 = 객체 ID."""
     p = path.split("?", 1)[0]
     return NUM_SEG_RE.sub("/{id}", p), NUM_SEG_RE.findall(p)
+
+
+def is_owned(tmpl: str) -> bool:
+    """'/rest/basket/{id}/checkout'처럼 소유 자원 경로(또는 그 하위)인가."""
+    return any(tmpl == p or tmpl.startswith(p + "/") for p in OWNED_PREFIXES)
 
 
 class Window:
@@ -122,7 +131,8 @@ def add_request(windows, win_sec, m):
     w.req_ts.append(ts)
     w.minutes[int(ts // 60)] += 1
     w.templates[(m["method"], tmpl)] += 1
-    w.objects.update((tmpl, i) for i in ids)
+    if is_owned(tmpl):
+        w.objects.update((tmpl.split("{id}")[0], i) for i in ids)
     if int(m["status"]) >= 400:
         w.errors += 1
     if m["method"] in WRITE_METHODS:
@@ -191,7 +201,12 @@ def main():
     ap.add_argument("--nginx", action="append", default=[], help="nginx access.log (.gz 가능)")
     ap.add_argument("--window", type=float, default=5, help="구간 길이(분), 기본 5")
     ap.add_argument("--out", required=True, help="출력 CSV")
+    ap.add_argument("--owned-path", action="append", default=[],
+                    help="uniq_objects로 셀 소유 자원 경로 템플릿 (여러 번 가능, 주면 기본 목록을 대체). "
+                         "예: --owned-path /api/Orders/{id}")
     args = ap.parse_args()
+    if args.owned_path:
+        OWNED_PREFIXES[:] = args.owned_path
     if not (args.alerts or args.archives or args.nginx):
         ap.error("--alerts / --archives / --nginx 중 하나는 필요")
     if args.archives and args.nginx:

@@ -54,7 +54,7 @@ Windows에서 글자가 깨지면 `$env:PYTHONUTF8=1`(PowerShell) 후 실행. �
 | | `auth_fail` · `uniq_users` | 인증 실패 그룹 알럿 수 · 서로 다른 계정 수 |
 | 웹 (archives / nginx) | `req_count` · `uniq_paths` | 요청 수 · 서로 다른 (메서드, 경로 템플릿) 수 |
 | | `max_req_1min` | 구간 안 1분 단위 최대 요청 수 — 룰(레이트리밋) 비교군이 쓰는 값 |
-| | `uniq_objects` | 경로 속 숫자 조각(객체 ID)의 서로 다른 수 — BOLA 징후 |
+| | `uniq_objects` | **소유 자원** 경로(장바구니·장바구니 항목·회원·카드·주소)의 서로 다른 객체 ID 수 — BOLA 징후. 상품 같은 공개 자원은 세지 않는다 (정상 쇼핑객이 상품을 많이 보면 공격자와 구분이 안 되므로). 대상 경로는 `--owned-path`로 교체 |
 | | `err_ratio` · `write_ratio` | 4xx·5xx 비율 · POST/PUT/PATCH/DELETE 비율 |
 | | `interval_cv` | 요청 간격 표준편차 ÷ 평균 (0에 가까울수록 기계적). 간격 2개 미만이면 1.0(중립) |
 | | `endpoint_entropy` | 경로 템플릿 분포 엔트로피 (`detector`의 `shannon` 재사용) |
