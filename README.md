@@ -53,6 +53,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/11_추가조사.md` | 추가 조사 — API 보안 솔루션 종류, 룰 밖 이상행위 탐지 방법, 수집(미러링) vs 탐지 단계 구분, 추가 검토 항목 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
 | `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
+| `ml/` | 행위 층 이상탐지 — 로그 → IP×5분 피처 → Z-score·IF·LOF·OCSVM 비교 → P/R/F1 채점 (`ml/README.md`) |
 
 ## 사용 피처
 
