@@ -52,7 +52,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/09_설계논의_히스토리.md` | 2026-10-22 방향 결정 Q&A 기록 (지도/비지도/LLM, 왜 ML, 전체 로그 vs Wazuh 로그 등) |
 | `docs/10_7-8주차_데이터파이프라인_ML이상탐지.md` | 7~8주차 실행 계획 (`07`·`08` 기준) — alerts·archives → MySQL 정규화·인덱스/EXPLAIN·자동 적재·리포트, Z-score·IF/LOF/OCSVM·시계열, Kibana 시각화, P/R/F1 |
 | `docs/11_추가조사.md` | 추가 조사 — API 보안 솔루션 종류, 룰 밖 이상행위 탐지 방법, 수집(미러링) vs 탐지 단계 구분, 추가 검토 항목 |
-| `docs/12_모델선정_지도vs비지도.md` | 모델 선정 논의 — Random Forest(지도) vs Isolation Forest(비지도) 차이, 함께 쓰는 구조, 하나만이면 IF, 타당성 입증 실험(E1~E3)·예비 결과 |
+| `docs/12_모델선정_지도vs비지도.md` | 모델 선정 논의 — Random Forest(지도) vs 비지도(Isolation Forest + LOF) 차이, 함께 쓰는 구조, LOF가 IF의 국소 이상치 약점을 보완하는 근거(H5·H6), 타당성 입증 실험(E1~E3)·예비 결과 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
 | `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
 | `ml/` | 행위 층 이상탐지 — Wazuh 로그 또는 nginx access.log → IP×5분 피처 → 룰·Z-score·IF·LOF·OCSVM 비교 → P/R/F1 채점 → LLM 설명 (`ml/README.md`) |
