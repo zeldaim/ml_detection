@@ -47,7 +47,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/05_데이터전략_시나리오_팀분담.md` | 공개 데이터 + 우리 공격 데이터 결합 전략, 추천 시나리오 4개, 1인 1서버 분담·공통 형식 |
 | `docs/06_기존자산_연계계획.md` | 기존 Home SOC Lab·커스텀 룰·Slack Alert Bot·엔트로피 연구를 프로젝트에 잇는 계획, 수정된 진행 순서 |
 | `docs/07_쇼핑몰API_공공데이터_계획.md` | **현재 메인 컨셉** — 쇼핑몰 API 이상행위 탐지(CSIC 2010 + 직접 생성 BOLA), 2층 탐지, 항공사 챗봇 확장, 3주 일정 |
-| `docs/08_테스트환경_구축순서.md` | 쇼핑몰(Juice Shop) 타겟 + Wazuh(alerts·archives) + ML 입력까지 구축 순서·체크리스트 |
+| `docs/08_테스트환경_구축순서.md` | 쇼핑몰(Juice Shop) 타겟 + Wazuh(alerts·archives) + ML 입력까지 구축 순서·체크리스트, §8 Wazuh 없이 nginx 단독 구축 |
 | `docs/09_설계논의_히스토리.md` | 2026-10-22 방향 결정 Q&A 기록 (지도/비지도/LLM, 왜 ML, 전체 로그 vs Wazuh 로그 등) |
 | `docs/10_7-8주차_데이터파이프라인_ML이상탐지.md` | 7~8주차 실행 계획 (`07`·`08` 기준) — alerts·archives → MySQL 정규화·인덱스/EXPLAIN·자동 적재·리포트, Z-score·IF/LOF/OCSVM·시계열, Kibana 시각화, P/R/F1 |
 | `docs/11_추가조사.md` | 추가 조사 — API 보안 솔루션 종류, 룰 밖 이상행위 탐지 방법, 수집(미러링) vs 탐지 단계 구분, 추가 검토 항목 |
