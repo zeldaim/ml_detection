@@ -54,9 +54,23 @@ python edge/edge_agent.py --kind db --log general.log --once --dry-run
 python edge/db_features.py --log general.log --print
 ```
 
-## DB 모델은 아직 규칙 — 다음 단계
+## DB 모델 학습됨 (`models/db_model.joblib`)
 
-웹은 학습 모델(`model.joblib`)이 있지만 **DB 피처는 아직 모델이 없어** collector가 임시 규칙(SQLi 토큰>0, WHERE id ≥ 임계값)으로 1차 경보한다. 쌓인 DB 벡터(`spool.jsonl`)를 CSV로 모아 `ml/train_export.py`로 **DB 전용 모델**을 학습하면, 웹과 같은 IF·LOF·RF 판정으로 넘어갈 수 있다. (DB 피처로 정상/공격을 모아 `features`/`answer` 형식에 맞추면 그대로 재사용)
+DB 피처로도 웹과 같은 IF·LOF·RF 모델을 학습했다. collector에 `--db-model`을 주면 규칙 대신 모델로 판정한다.
+
+```bash
+# DB 학습 데이터(합성) → 피처 → 모델
+python tools/gen_db_traffic.py --out data/general_lab.log --answer data/answer_db.csv
+python edge/db_features.py --log data/general_lab.log --out data/features_db.csv
+python ml/train_export.py data/features_db.csv --answer data/answer_db.csv --contamination 0.05 --out models/db_model.joblib
+
+# collector에 DB 모델 연결
+python edge/collector.py --model models/model.joblib --db-model models/db_model.joblib --port 8000
+```
+
+결과(합성, scikit-learn 1.9.1): E2 탐지율 LOF 1.00 / IF 0.78(IF가 놓치고 LOF가 잡은 느린 BOLA 2구간, H5), 종류 분류 5/9 — sqli·scrape는 정확, 느린 bola는 일부 정상으로. **웹 계층과 같은 경향**이 DB 계층에서도 재현됨.
+`--db-model` 없이 돌리면 임시 규칙(SQLi 토큰>0, WHERE id ≥ 임계값)으로 1차 경보한다.
+한계: 합성 데이터라 경향 확인용. 실제 MySQL 로그로 재검증 필요. DB 사용자가 하나면 쿼리의 출발지 구분 보강 필요.
 
 ## 주의
 

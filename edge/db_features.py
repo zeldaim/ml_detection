@@ -32,6 +32,10 @@ CONNECT_HOST_RE = re.compile(r"@([\w.\-]+|\d{1,3}(?:\.\d{1,3}){3})")   # app@10.
 NUM_RE = re.compile(r"\b\d+\b")
 STR_RE = re.compile(r"'(?:[^'\\]|\\.)*'")
 TABLE_RE = re.compile(r"\b(?:from|join|into|update)\s+`?(\w+)`?", re.I)
+# distinct_where_ids는 '주인만 봐야 하는' 테이블의 id만 센다 (BOLA). 상품 같은 공개 테이블은 제외 —
+# 정상 상품 조회가 BOLA 신호를 오염시키지 않도록 (웹의 uniq_objects 소유자원 제한과 같은 원리).
+OWNED_TABLES = {"orders", "order", "users", "user", "basket", "baskets", "basketitems",
+                "addresses", "address", "cards", "card", "payments", "payment", "wallets"}
 EQ_ID_RE = re.compile(r"=\s*(\d+)")                    # WHERE id = 5
 IN_LIST_RE = re.compile(r"\bin\s*\(([^)]*)\)", re.I)   # id IN (1,2,3) → 전체 리스트
 
@@ -84,8 +88,10 @@ class Win:
         self.cmds[cmd.lower()] += 1
         if cmd.lower() in ("query", "execute") and arg:
             self.templates.add(normalize(arg))
-            self.tables.update(m.lower() for m in TABLE_RE.findall(arg))
-            self.where_ids.update(where_ids(arg))
+            tables = {m.lower() for m in TABLE_RE.findall(arg)}
+            self.tables.update(tables)
+            if tables & OWNED_TABLES:               # 소유 테이블을 건드린 쿼리의 id만 셈
+                self.where_ids.update(where_ids(arg))
             if SQLI_RE.search(arg):
                 self.sqli += 1
 
@@ -145,7 +151,7 @@ def main():
         start = datetime.fromtimestamp(ws, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         rows.append([host, start] + w.row())
 
-    hdr = ["host", "window_start"] + DB_FEATURES
+    hdr = ["ip", "window_start"] + DB_FEATURES   # 'ip' = 클라이언트 주소. ml/ 스크립트 호환 위해 동일 열 이름
     if args.show or not args.out:
         print("\t".join(hdr))
         for r in rows:

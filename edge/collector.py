@@ -54,8 +54,14 @@ def handle(payload):
                 models = "+".join([m for m, f in (("IF", iff), ("LOF", lof)) if f])
                 alerts.append(f"🚨 [web] {ws} {ident:<16} 이상({models})" +
                               (f" · RF={rf}" if rf else ""))
+        elif role == "db" and STATE["db_bundle"] is not None:
+            iff, lof, rf = score_web(STATE["db_bundle"], feat)   # 같은 번들 구조(IF·LOF·RF)
+            rec["verdict"] = {"iforest": iff, "lof": lof, "rf_class": rf}
+            if iff or lof:
+                models = "+".join([m for m, f in (("IF", iff), ("LOF", lof)) if f])
+                alerts.append(f"🚨 [db]  {ws} {ident:<16} 이상({models})" + (f" · RF={rf}" if rf else ""))
         elif role == "db":
-            reasons = flag_db(feat)
+            reasons = flag_db(feat)   # DB 모델 없으면 임시 규칙
             rec["verdict"] = {"rule_reasons": reasons}
             if reasons:
                 alerts.append(f"🚨 [db]  {ws} {ident:<16} " + ", ".join(reasons))
@@ -103,16 +109,20 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     ap = argparse.ArgumentParser(description="중앙 collector — 엣지 벡터 수신·판정")
     ap.add_argument("--model", help="웹 벡터 판정용 .joblib (없으면 적재만)")
+    ap.add_argument("--db-model", help="DB 벡터 판정용 .joblib (없으면 임시 규칙)")
     ap.add_argument("--host", default="0.0.0.0")
     ap.add_argument("--port", type=int, default=8000)
     ap.add_argument("--spool", default="edge/spool.jsonl", help="받은 벡터·판정 적재 파일")
     ap.add_argument("--db-id-threshold", type=int, default=15, help="DB WHERE id 종류 수 경보 임계값")
     args = ap.parse_args()
 
-    STATE["bundle"] = None
-    if args.model:
+    STATE["bundle"] = STATE["db_bundle"] = None
+    if args.model or args.db_model:
         import joblib
-        STATE["bundle"] = joblib.load(args.model)
+        if args.model:
+            STATE["bundle"] = joblib.load(args.model)
+        if args.db_model:
+            STATE["db_bundle"] = joblib.load(args.db_model)
     STATE["spool"] = args.spool
     STATE["db_id_threshold"] = args.db_id_threshold
     os.makedirs(os.path.dirname(os.path.abspath(args.spool)) or ".", exist_ok=True)
