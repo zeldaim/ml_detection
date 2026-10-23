@@ -4,8 +4,10 @@
 > 의존성: scikit-learn (numpy 포함). pandas 불필요.
 
 ```
-alerts.json / archives.json ─▶ features.py ─▶ 피처 CSV ─▶ models.py ─▶ detections CSV ─▶ evaluate.py ─▶ P/R/F1
-                                (IP × 5분)                (zscore·iforest·lof·ocsvm)          (정답지)
+alerts.json / archives.json ─▶ features.py ─▶ 피처 CSV ─▶ models.py ─▶ detections CSV ─┬─▶ evaluate.py ─▶ P/R/F1
+                                (IP × 5분)                (zscore·iforest·lof·ocsvm)       │   (정답지)
+                                                                                           └─▶ explain_llm.py ─▶ 추천·설명
+                                                                                               (상위 후보, 숫자 요약만)
 ```
 
 | 파일 | 역할 |
@@ -13,6 +15,7 @@ alerts.json / archives.json ─▶ features.py ─▶ 피처 CSV ─▶ models.p
 | `features.py` | 로그 → IP × 구간 피처 표. alerts는 룰 알럿 피처, archives는 nginx 접근 로그·sshd 실패 피처 |
 | `models.py` | 같은 피처 표로 Z-score(robust) · Isolation Forest · LOF · One-Class SVM 실행, 점수는 모두 "클수록 이상" |
 | `evaluate.py` | 정답지로 구간 단위·IP 단위 TP/FP/FN/TN, Precision/Recall/F1, 공격별 탐지 여부 |
+| `explain_llm.py` | 한 방법의 이상 점수 상위 N개 구간을 **숫자 요약**(피처 값 + 평소 중앙값 + 다른 방법 일치 여부)으로 LLM에 보내 block_30m / observe / ignore 추천과 이유를 받음 |
 
 ## 실행 (저장소 루트에서)
 
@@ -26,6 +29,10 @@ python ml/evaluate.py data/detections.csv --answer samples/sample_answer_if.csv
 python ml/features.py --archives archives.json --out data/features_archives.csv
 python ml/models.py data/features_archives.csv --train-until 2026-11-03T09:00:00Z --out data/det_archives.csv
 python ml/evaluate.py data/det_archives.csv --answer data/answer.csv
+
+# LLM 설명 (anthropic 설치 + 자격증명이 있으면 API 호출·요금 발생, 없으면 프롬프트 출력)
+python ml/explain_llm.py data/detections.csv data/features_alerts.csv --method lof --top 5 --answer samples/sample_answer_if.csv
+python ml/explain_llm.py data/detections.csv data/features_alerts.csv --dry-run   # 프롬프트만
 
 # 09 Q12 비교: 같은 기간을 --alerts만으로도 만들어 같은 모델·같은 정답지로
 python ml/features.py --alerts alerts.json --out data/features_alerts.csv
@@ -68,6 +75,15 @@ Windows에서 글자가 깨지면 `$env:PYTHONUTF8=1`(PowerShell) 후 실행. �
 - **zscore가 느린 공격을 놓침**: 피처를 하나씩 보는데, 느린 공격은 5분 구간마다 값이 크지 않다 → 다변량 모델이 필요한 이유
 - **ocsvm 오탐 다수**: 38행 중 고유한 행이 10개뿐이라 중복 점이 경계(점수 ≈ −0.0003)에 몰려 미세한 수치 차이로 안/밖이 갈린다. 표본이 작고 중복이 많은 데이터의 한계 — 랩 로그로 다시 볼 것
 - lof가 가장 좋게 나왔지만 이 샘플 하나의 결과다. 같은 비교를 랩 로그(정상 기간으로 fit)로 반복해야 의미가 있다
+
+## LLM 단계 설계 (`explain_llm.py`)
+
+- **원문 문자열을 보내지 않는다**: 경로·User-Agent·계정 이름은 공격자가 쓸 수 있는 칸이라 빼고, 피처 숫자만 보낸다 (`labs/01` 4단계에서 원문 전달 시 흔들림을 확인한 이유)
+- **IP도 보내지 않는다**: 후보는 `C1`, `C2` 같은 id로만 보내고 IP 매핑은 스크립트 안에서만 한다
+- **평소 값 제공**: LLM은 우리 환경의 평소를 모르므로 학습 구간 중앙값을 함께 준다 (`docs/09` Q5)
+- **출력 제한**: 구조화 출력으로 `block_30m / observe / ignore` 중 하나만. 최종 조치는 룰·점수가 결정 (`docs/03` §3-6)
+- 비결정성: 같은 입력에도 답이 달라질 수 있다 → 비교 실험에선 여러 번 실행해 비율로
+- API 호출 경로는 이 PC에 자격증명이 없어 **실제 호출로는 미검증**(2026-10-23, 프롬프트 출력·자격증명 없음 경로만 확인)
 
 ## 주의
 
