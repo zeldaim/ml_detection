@@ -49,6 +49,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/07_쇼핑몰API_공공데이터_계획.md` | **현재 메인 컨셉** — 쇼핑몰 API 이상행위 탐지(CSIC 2010 + 직접 생성 BOLA), 2층 탐지, 항공사 챗봇 확장, 3주 일정 |
 | `docs/08_테스트환경_구축순서.md` | 쇼핑몰(Juice Shop) 타겟 + Wazuh(alerts·archives) + ML 입력까지 구축 순서·체크리스트 |
 | `docs/09_설계논의_히스토리.md` | 2026-10-22 방향 결정 Q&A 기록 (지도/비지도/LLM, 왜 ML, 전체 로그 vs Wazuh 로그 등) |
+| `docs/10_7-8주차_데이터파이프라인_ML이상탐지.md` | 7~8주차 실행 계획 (`07`·`08` 기준) — alerts·archives → MySQL 정규화·인덱스/EXPLAIN·자동 적재·리포트, Z-score·IF/LOF/OCSVM·시계열, Kibana 시각화, P/R/F1 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
 | `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
 
@@ -62,6 +63,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 - 룰 · ML · LLM · ML+LLM 4방식 비교 실험 (`docs/03`)
 - SOAR로 탐지 이후 대응 자동화 (`docs/04`)
 - 공개 데이터로 배경 채우기 + 1인 1서버 분담 (`docs/05`)
+- 7~8주차: 08 환경 로그 → MySQL 파이프라인 + 베이스라인·비지도 모델 비교·시계열과 성능 평가 (`docs/10`)
 - (선택) 클라우드 환경 재현
 
 ## 주의
