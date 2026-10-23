@@ -40,6 +40,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `samples/sample_alerts.json` | 소규모 검증 샘플 |
 | `samples/sample_alerts_if.json` | Isolation Forest 경로 검증용 합성 샘플 |
 | `tools/make_sample.py` | 위 합성 샘플 생성기 (`python tools/make_sample.py samples/sample_alerts_if.json`) |
+| `tools/gen_normal_traffic.py` | Juice Shop 정상 트래픽 생성기 — 가상 사용자별 출발지 IP로 nginx 정상 로그를 쌓고 정상 기간 끝(UTC) 출력 (`docs/08` §8-5) |
 | `docs/01_Wazuh_ML_실습_런북.md` | 랩 구축 런북 (Wazuh 경량화, 공격 재현, 로그 확장, 자동 차단) |
 | `docs/02_Isolation_Forest_개념정리.md` | 쉬운 개념 설명, 오해 정리, 지표 추가 규칙, ML vs LLM |
 | `docs/03_ML_vs_LLM_비교실험_계획.md` | 후속 실험 계획 — 룰·ML·LLM·조합 비교, 모니터링 지표·클라우드 분석, 자동 대응 LLM 도입 |
