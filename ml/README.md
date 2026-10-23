@@ -16,6 +16,7 @@ alerts / archives / access.log ─▶ features.py ─▶ 피처 CSV ─▶ model
 | `models.py` | 같은 피처 표로 **룰 비교군**(레이트리밋 / Wazuh 레벨 10+) · Z-score(robust) · Isolation Forest · LOF · One-Class SVM 실행, 점수는 모두 "클수록 이상" |
 | `evaluate.py` | 정답지로 구간 단위·IP 단위 TP/FP/FN/TN, Precision/Recall/F1, 공격별 탐지 여부 |
 | `supervised.py` | **지도(Random Forest) vs 비지도(Isolation Forest · LOF)** 비교 — 공격 사건·종류를 하나씩 빼고 학습해 "아는 공격 / 처음 보는 공격" 탐지율과 정상 오탐률 비교. IF\|LOF(OR)·IF&LOF(AND)·RF 조합과 "IF가 놓치고 LOF가 잡은 구간 수"도 집계 (`docs/12`) |
+| `classify_type.py` | **RF 다중 분류** — 공격 종류(normal/brute_fast/bola…)를 이름까지 맞히는지. 사건 하나씩 빼고 예측 → 종류 정확도·혼동행렬. 비지도는 발견, RF는 종류 분류 (`docs/12` §6-2) |
 | `explain_llm.py` | 한 방법의 이상 점수 상위 N개 구간을 **숫자 요약**(피처 값 + 평소 중앙값 + 다른 방법 일치 여부)으로 LLM에 보내 block_30m / observe / ignore 추천과 이유를 받음 |
 
 ## 실행 (저장소 루트에서)
