@@ -58,6 +58,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/13_종합결과.md` | **종합 결과** — 웹·DB 2계층 실험 결과, 2계층 탐지 구조 결론, 자동화, 한계·다음 단계 |
 | `docs/14_실제MySQL_재검증_준비.md` | 실제 MySQL 로그로 DB 모델 재검증 런북 — 인프라·general log·트래픽·출발지 귀속 문제·실행·체크리스트 |
 | `docs/15_API공격_피처_분석.md` | OWASP API Top10 + SQLi 공격별 분석·추천 피처·피처 획득법(로그 외 소스 포함)·현재 피처 갭 분석 |
+| `docs/16_레퍼런스_논문_프로젝트.md` | 참고 레퍼런스 — 알고리즘 원논문·공개 데이터셋·관련 최신 논문·산업 프레임(UEBA/WAAP)·연구 공동체·검색법 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
 | `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
 | `ml/` | 행위 층 이상탐지 — Wazuh 로그 또는 nginx access.log → IP×5분 피처 → 룰·Z-score·IF·LOF·OCSVM 비교 → P/R/F1 채점 → LLM 설명 (`ml/README.md`) |
