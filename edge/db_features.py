@@ -106,18 +106,27 @@ class Win:
                 self.sqli, round(interval_cv(self.ts), 4)]
 
 
-def parse(path, win_sec):
-    """general log → {(host, window_start): Win}. Connect 줄로 연결 id→host 매핑."""
+def parse(path, win_sec, stats=None):
+    """general log → {(host, window_start): Win}. Connect 줄로 연결 id→host 매핑.
+    stats(dict)를 주면 파싱 커버리지를 채운다: total/connect/query/cont/unparsed/samples."""
     conn_host = {}
     windows = defaultdict(Win)
     last = None  # (host, cmd, ts) 이어지는 줄 처리용
     with open(path, "r", encoding="utf-8", errors="replace") as f:
         for line in f:
+            if stats is not None:
+                stats["total"] += 1
             m = LINE_RE.match(line.rstrip("\n"))
             if not m:
                 if last and last[1].lower() in ("query", "execute"):  # 여러 줄 쿼리의 이어지는 줄
                     host, cmd, t = last
                     windows[(host, int(t // win_sec * win_sec))].add(t, cmd, line.strip())
+                    if stats is not None:
+                        stats["cont"] += 1
+                elif stats is not None and line.strip():
+                    stats["unparsed"] += 1
+                    if len(stats["samples"]) < 5:
+                        stats["samples"].append(line.rstrip("\n")[:160])
                 continue
             cid, cmd, arg = m["cid"], m["cmd"], m["arg"]
             t = _ts(m["ts"]) if m["ts"] else (last[2] if last else 0)
@@ -125,10 +134,14 @@ def parse(path, win_sec):
                 hm = CONNECT_HOST_RE.search(arg)
                 conn_host[cid] = hm.group(1) if hm else cid
                 last = None
+                if stats is not None:
+                    stats["connect"] += 1
                 continue
             host = conn_host.get(cid, cid)   # 매핑 없으면 연결 id를 식별자로
             windows[(host, int(t // win_sec * win_sec))].add(t, cmd, arg)
             last = (host, cmd, t)
+            if stats is not None:
+                stats["query"] += 1
     return windows
 
 
@@ -142,10 +155,30 @@ def main():
     ap.add_argument("--window", type=float, default=5, help="구간 길이(분)")
     ap.add_argument("--out", help="피처 CSV 저장")
     ap.add_argument("--print", action="store_true", dest="show", help="벡터를 화면에 출력")
+    ap.add_argument("--check", action="store_true",
+                    help="파싱 커버리지만 점검(실제 로그 형식이 맞는지). 미파싱 줄 샘플 출력")
     args = ap.parse_args()
 
     win_sec = int(args.window * 60)
-    windows = parse(args.log, win_sec)
+    stats = {"total": 0, "connect": 0, "query": 0, "cont": 0, "unparsed": 0, "samples": []}
+    windows = parse(args.log, win_sec, stats)
+
+    if args.check:
+        print(f"총 {stats['total']}줄 · Connect {stats['connect']} · Query {stats['query']} · "
+              f"이어진 줄 {stats['cont']} · 미파싱 {stats['unparsed']}")
+        hosts = {h for h, _ in windows}
+        print(f"식별된 출발지(host/connid) {len(hosts)}개: {', '.join(sorted(hosts)[:10])}"
+              + (" ..." if len(hosts) > 10 else ""))
+        if stats["unparsed"]:
+            print(f"\n⚠️ 미파싱 {stats['unparsed']}줄 — LINE_RE 보강 필요. 샘플:")
+            for s in stats["samples"]:
+                print(f"  | {s}")
+            print("\n실제 로그 형식이 다르면 db_features.py의 LINE_RE·CONNECT_HOST_RE를 맞춰야 한다.")
+        else:
+            print("\n✅ 미파싱 0 — 파서가 이 로그 형식과 맞음.")
+        if len(hosts) <= 1:
+            print("\n⚠️ 출발지가 1개뿐 — DB가 앱 서버만 보는 '귀속 문제'일 수 있다. docs/14 §4 참고.")
+        return
     rows = []
     for (host, ws), w in sorted(windows.items(), key=lambda kv: (kv[0][1], kv[0][0])):
         start = datetime.fromtimestamp(ws, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")

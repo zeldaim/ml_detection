@@ -56,6 +56,7 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/11_추가조사.md` | 추가 조사 — API 보안 솔루션 종류, 룰 밖 이상행위 탐지 방법, 수집(미러링) vs 탐지 단계 구분, 추가 검토 항목 |
 | `docs/12_모델선정_지도vs비지도.md` | 모델 선정 논의 — Random Forest(지도) vs 비지도(Isolation Forest + LOF) 차이, 함께 쓰는 구조, LOF가 IF의 국소 이상치 약점을 보완하는 근거(H5·H6), 타당성 입증 실험(E1~E3)·예비 결과 |
 | `docs/13_종합결과.md` | **종합 결과** — 웹·DB 2계층 실험 결과, 2계층 탐지 구조 결론, 자동화, 한계·다음 단계 |
+| `docs/14_실제MySQL_재검증_준비.md` | 실제 MySQL 로그로 DB 모델 재검증 런북 — 인프라·general log·트래픽·출발지 귀속 문제·실행·체크리스트 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
 | `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
 | `ml/` | 행위 층 이상탐지 — Wazuh 로그 또는 nginx access.log → IP×5분 피처 → 룰·Z-score·IF·LOF·OCSVM 비교 → P/R/F1 채점 → LLM 설명 (`ml/README.md`) |
