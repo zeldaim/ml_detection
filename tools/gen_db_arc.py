@@ -25,8 +25,9 @@ def main():
     end = base + timedelta(minutes=a.minutes)
     events = []  # (ts, cid, cmd, arg)
     cid = {}
+    _next = [10]   # 단조 증가 커넥션 id (같은 IP 재연결 시 cid 충돌 방지 — 리뷰 #5 버그수정)
     def conn(ip):
-        c = 10 + len(cid); cid[ip] = c
+        c = _next[0]; _next[0] += 1; cid[ip] = c
         events.append((base, c, "Connect", f"app@{ip} on shop using TCP/IP"))
         return c
 
