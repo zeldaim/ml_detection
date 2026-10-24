@@ -36,6 +36,8 @@ from wazuh_ml_detect import dig, extract_srcip, parse_ts, shannon  # noqa: E402
 ALERT_FEATURES = ["alert_count", "rule_level_max", "uniq_rules", "auth_fail", "uniq_users"]
 WEB_FEATURES = ["req_count", "max_req_1min", "uniq_paths", "uniq_objects", "err_ratio",
                 "write_ratio", "interval_cv", "endpoint_entropy", "ssh_fail"]
+# seq_id_score(객체 ID 연속성) 는 2026-10-25 실험에서 합성 데이터 기준 uniq_objects 와 중복이라
+# 이득 없음(IF 오탐↑) → 채택 보류. 실제 로그에서 재검증 대상 (docs/21 §D·실험2).
 
 # nginx combined: IP - - [시각] "메서드 경로 프로토콜" 상태 크기 "Referer" "User-Agent"
 NGINX_RE = re.compile(r'(?P<ip>\d{1,3}(?:\.\d{1,3}){3}|[0-9a-fA-F:]+) \S+ \S+ '
