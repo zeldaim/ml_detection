@@ -24,10 +24,15 @@ def score_web(bundle, feat):
     import numpy as np
     cols = bundle["features"]
     X = np.array([[float(feat.get(c, 0)) for c in cols]])
+    Xs = bundle["scaler"].transform(X)
     if_flag = bool(bundle["iforest"].predict(X)[0] == -1)
-    lof_flag = bool(bundle["lof"].predict(bundle["scaler"].transform(X))[0] == -1)
+    lof_flag = bool(bundle["lof"].predict(Xs)[0] == -1)
+    ae_flag = False
+    if bundle.get("autoencoder") is not None:   # v2 번들에만 있음
+        err = float(((bundle["autoencoder"].predict(Xs) - Xs) ** 2).mean())
+        ae_flag = err >= bundle["ae_threshold"]
     rf = bundle["rf"].predict(X)[0] if bundle["rf"] is not None else ""
-    return if_flag, lof_flag, rf
+    return if_flag, lof_flag, ae_flag, rf
 
 
 def flag_db(feat):
@@ -48,17 +53,17 @@ def handle(payload):
         rec = {"ts_recv": _now(), "role": role, "host": host, "id": ident,
                "window_start": ws, "features": feat}
         if role == "web" and STATE["bundle"] is not None:
-            iff, lof, rf = score_web(STATE["bundle"], feat)
-            rec["verdict"] = {"iforest": iff, "lof": lof, "rf_class": rf}
-            if iff or lof:
-                models = "+".join([m for m, f in (("IF", iff), ("LOF", lof)) if f])
+            iff, lof, ae, rf = score_web(STATE["bundle"], feat)
+            rec["verdict"] = {"iforest": iff, "lof": lof, "autoencoder": ae, "rf_class": rf}
+            if iff or lof or ae:
+                models = "+".join([m for m, f in (("IF", iff), ("LOF", lof), ("AE", ae)) if f])
                 alerts.append(f"🚨 [web] {ws} {ident:<16} 이상({models})" +
                               (f" · RF={rf}" if rf else ""))
         elif role == "db" and STATE["db_bundle"] is not None:
-            iff, lof, rf = score_web(STATE["db_bundle"], feat)   # 같은 번들 구조(IF·LOF·RF)
-            rec["verdict"] = {"iforest": iff, "lof": lof, "rf_class": rf}
-            if iff or lof:
-                models = "+".join([m for m, f in (("IF", iff), ("LOF", lof)) if f])
+            iff, lof, ae, rf = score_web(STATE["db_bundle"], feat)   # 같은 번들 구조(IF·LOF·AE·RF)
+            rec["verdict"] = {"iforest": iff, "lof": lof, "autoencoder": ae, "rf_class": rf}
+            if iff or lof or ae:
+                models = "+".join([m for m, f in (("IF", iff), ("LOF", lof), ("AE", ae)) if f])
                 alerts.append(f"🚨 [db]  {ws} {ident:<16} 이상({models})" + (f" · RF={rf}" if rf else ""))
         elif role == "db":
             reasons = flag_db(feat)   # DB 모델 없으면 임시 규칙

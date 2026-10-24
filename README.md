@@ -61,7 +61,8 @@ python3 detector/wazuh_ml_detect.py --alerts /var/ossec/logs/alerts/alerts.json 
 | `docs/16_레퍼런스_논문_프로젝트.md` | 참고 레퍼런스 — 알고리즘 원논문·공개 데이터셋·관련 최신 논문·산업 프레임(UEBA/WAAP)·연구 공동체·검색법 |
 | `docs/_이전버전/` | 수정 전 문서 보관 |
 | `labs/01_공개데이터_SSH_랩/` | **Wazuh 없이** 공개 SSH 로그(Loghub)로 룰·ML·LLM을 직접 비교하는 1~2시간 실습 |
-| `ml/` | 행위 층 이상탐지 — Wazuh 로그 또는 nginx access.log → IP×5분 피처 → 룰·Z-score·IF·LOF·OCSVM 비교 → P/R/F1 채점 → LLM 설명 (`ml/README.md`) |
+| `ml/load_csic.py` | CSIC 2010 공개 데이터 → 우리 웹 피처로 변환(교차검증, `docs/16` §2). 데이터는 수동 다운로드 |
+| `ml/` | 행위 층 이상탐지 — Wazuh 로그 또는 nginx access.log → IP×5분 피처 → 룰·Z-score·IF·LOF·OCSVM·Autoencoder 비교 → P/R/F1 채점 → LLM 설명 (`ml/README.md`) |
 
 ## 사용 피처
 

@@ -43,6 +43,7 @@ def main():
     import numpy as np
     from sklearn.ensemble import IsolationForest, RandomForestClassifier
     from sklearn.neighbors import LocalOutlierFactor
+    from sklearn.neural_network import MLPRegressor
     from sklearn.preprocessing import StandardScaler
 
     rows, cols, X = load_features(args.features, args.drop)
@@ -74,6 +75,11 @@ def main():
     iso = IsolationForest(n_estimators=300, contamination=args.contamination, random_state=0).fit(Xn)
     lof = LocalOutlierFactor(n_neighbors=max(2, min(20, len(Xn) - 1)),
                              contamination=args.contamination, novelty=True).fit(scaler.transform(Xn))
+    # Autoencoder(MLP): 정상을 압축→복원 학습. 재구성 오차 > 임계값이면 이상 (docs/16 §0 IF 외삽 한계 보완)
+    Xsn = scaler.transform(Xn)
+    ae = MLPRegressor(hidden_layer_sizes=(max(2, Xn.shape[1] // 2),), activation="relu",
+                      max_iter=1500, random_state=0).fit(Xsn, Xsn)
+    ae_threshold = float(np.quantile(((ae.predict(Xsn) - Xsn) ** 2).mean(axis=1), 1 - args.contamination))
 
     bundle = {
         "features": cols,                 # 입력 피처 순서 (예측 때 똑같이 맞춰야 함)
@@ -81,6 +87,8 @@ def main():
         "scaler": scaler,
         "iforest": iso,
         "lof": lof,
+        "autoencoder": ae,            # v2 추가: 오토인코더
+        "ae_threshold": ae_threshold,  # 재구성 오차 경계(정상 기준)
         "rf": None,
         "classes": None,
         "trained_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -103,7 +111,7 @@ def main():
     print(f"저장: {args.out} ({size/1024:.1f} KB)")
     print(f"  피처 {len(cols)}개: {', '.join(cols)}")
     print(f"  학습 정상 구간 {bundle['n_normal']}개 · contamination {args.contamination}")
-    print(f"  이상탐지: IsolationForest, LOF(+스케일러)")
+    print(f"  이상탐지: IsolationForest, LOF, Autoencoder(+스케일러, 오차경계 {ae_threshold:.4f})")
     if bundle["rf"] is not None:
         print(f"  분류: RandomForest, 종류 {bundle['classes']}")
     print(f"  학습 시각(UTC) {bundle['trained_at']} · scikit-learn {bundle['sklearn']}")

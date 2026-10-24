@@ -60,6 +60,7 @@ def main():
     import numpy as np
     from sklearn.ensemble import IsolationForest, RandomForestClassifier
     from sklearn.neighbors import LocalOutlierFactor
+    from sklearn.neural_network import MLPRegressor
     from sklearn.preprocessing import StandardScaler
 
     rows = list(csv.DictReader(open(args.features, encoding="utf-8")))
@@ -81,7 +82,8 @@ def main():
 
     print(f"피처 {len(cols)}개 · 정상 구간 학습 {len(normal_train)} / 평가 {len(normal_test)} · "
           f"공격 묶음 {len(groups)}개 ({args.group_by} 기준)\n")
-    names = ["RF", "IF", "LOF", "IF|LOF", "IF&LOF", "RF|IF", "RF|IF|LOF", "RF|(IF&LOF)"]
+    names = ["RF", "IF", "LOF", "IF|LOF", "IF&LOF", "RF|IF", "RF|IF|LOF", "RF|(IF&LOF)",
+             "AE", "IF|LOF|AE"]   # AE(오토인코더) + 3비지도 OR 앙상블 추가 (docs/16: IF 외삽 한계 보완)
     print(f"{'뺀 묶음(평가 대상)':<26}{'공격구간':>6}  " + "".join(f"{n:>12}" for n in names))
     total = defaultdict(int)
     importances = np.zeros(len(cols))
@@ -98,13 +100,24 @@ def main():
         scaler = StandardScaler().fit(X[normal_train])  # LOF는 거리 기반 → 정상 기간 기준 스케일링
         lof = LocalOutlierFactor(n_neighbors=k, contamination=args.contamination, novelty=True)
         lof.fit(scaler.transform(X[normal_train]))
+        # Autoencoder: 정상을 압축→복원 학습, 재구성 오차 큰 점이 이상 (sklearn MLP로 구현)
+        bottleneck = max(2, X.shape[1] // 2)
+        ae = MLPRegressor(hidden_layer_sizes=(bottleneck,), activation="relu",
+                          max_iter=1500, random_state=0)
+        Xs_norm = scaler.transform(X[normal_train])
+        ae.fit(Xs_norm, Xs_norm)
+        ae_thr = np.quantile(((ae.predict(Xs_norm) - Xs_norm) ** 2).mean(axis=1),
+                             1 - args.contamination)
 
         def flags(idx):
             p_rf = rf.predict_proba(X[idx])[:, 1] >= 0.5
             p_if = iso.predict(X[idx]) == -1
             p_lof = lof.predict(scaler.transform(X[idx])) == -1
+            Xs = scaler.transform(X[idx])
+            p_ae = ((ae.predict(Xs) - Xs) ** 2).mean(axis=1) >= ae_thr
             return [p_rf, p_if, p_lof, p_if | p_lof, p_if & p_lof, p_rf | p_if,
-                    p_rf | p_if | p_lof, p_rf | (p_if & p_lof)]
+                    p_rf | p_if | p_lof, p_rf | (p_if & p_lof),
+                    p_ae, p_if | p_lof | p_ae]
 
         fa, fn = flags(test_attack), flags(normal_test)
         a, n = [int(f.sum()) for f in fa], [int(f.sum()) for f in fn]

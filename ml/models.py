@@ -12,6 +12,8 @@
   iforest : 무작위 분할로 빨리 고립되는 점 (스케일링 불필요)
   lof     : 이웃보다 밀도가 낮은 점 (스케일링 필요)
   ocsvm   : 정상 데이터를 감싸는 경계 밖의 점 (스케일링 필요)
+  autoencoder : 정상을 압축→복원하도록 학습한 신경망. 복원이 안 되는(재구성 오차 큰) 점이 이상.
+            IF가 못 보는 "본 적 없는 값"도 오차로 드러난다(docs/16 §0 — IF 외삽 한계 보완). sklearn MLP로 구현
 
 사용:
   python ml/models.py data/features_alerts.csv --out data/detections.csv
@@ -24,7 +26,7 @@ import os
 import sys
 from datetime import datetime
 
-METHODS = ["rule", "zscore", "iforest", "lof", "ocsvm"]
+METHODS = ["rule", "zscore", "iforest", "lof", "ocsvm", "autoencoder"]
 
 
 def parse_utc(s: str) -> datetime:
@@ -95,6 +97,17 @@ def run(method, X_train, X, args, train_is_all):
         from sklearn.svm import OneClassSVM
         m = OneClassSVM(nu=args.nu, gamma="scale").fit(Xs_train)
         return -m.decision_function(Xs), m.predict(Xs) == -1
+    if method == "autoencoder":
+        from sklearn.neural_network import MLPRegressor
+        # 정상 데이터를 입력=출력으로 복원 학습(압축 병목 hidden). 재구성 오차(MSE)가 이상 점수.
+        bottleneck = max(2, Xs_train.shape[1] // 2)
+        ae = MLPRegressor(hidden_layer_sizes=(bottleneck,), activation="relu",
+                          max_iter=1500, random_state=0)
+        ae.fit(Xs_train, Xs_train)
+        err = ((ae.predict(Xs) - Xs) ** 2).mean(axis=1)
+        err_train = ((ae.predict(Xs_train) - Xs_train) ** 2).mean(axis=1)
+        thr = np.quantile(err_train, 1 - args.contamination)  # 정상 오차 상위 contamination%를 경계로
+        return err, err >= thr
     raise ValueError(method)
 
 
@@ -105,7 +118,7 @@ def main():
     ap.add_argument("features", help="ml/features.py 출력 CSV")
     ap.add_argument("--methods", nargs="+", choices=METHODS, default=METHODS)
     ap.add_argument("--train-until", help="이 시각 이전 구간으로만 fit (정상 수집 기간 끝, ISO8601)")
-    ap.add_argument("--contamination", type=float, default=0.1, help="iforest·lof 이상 비율 (기본 0.1)")
+    ap.add_argument("--contamination", type=float, default=0.1, help="iforest·lof·autoencoder 이상 비율 (기본 0.1)")
     ap.add_argument("--nu", type=float, default=0.1, help="ocsvm 경계 밖 허용 비율 (기본 0.1)")
     ap.add_argument("--z", type=float, default=3.0, help="zscore 임계값 (기본 3)")
     ap.add_argument("--rule-rpm", type=float, help="rule: 1분 요청 수 임계값 (기본: 정상 기간 최대 × 1.5)")

@@ -13,7 +13,7 @@ alerts / archives / access.log ─▶ features.py ─▶ 피처 CSV ─▶ model
 | 파일 | 역할 |
 |---|---|
 | `features.py` | 로그 → IP × 구간 피처 표. alerts는 룰 알럿 피처, archives·nginx는 웹 요청 피처. `.gz`도 읽음 |
-| `models.py` | 같은 피처 표로 **룰 비교군**(레이트리밋 / Wazuh 레벨 10+) · Z-score(robust) · Isolation Forest · LOF · One-Class SVM 실행, 점수는 모두 "클수록 이상" |
+| `models.py` | 같은 피처 표로 **룰 비교군**(레이트리밋 / Wazuh 레벨 10+) · Z-score(robust) · Isolation Forest · LOF · One-Class SVM · Autoencoder 실행, 점수는 모두 "클수록 이상" |
 | `evaluate.py` | 정답지로 구간 단위·IP 단위 TP/FP/FN/TN, Precision/Recall/F1, 공격별 탐지 여부 |
 | `supervised.py` | **지도(Random Forest) vs 비지도(Isolation Forest · LOF)** 비교 — 공격 사건·종류를 하나씩 빼고 학습해 "아는 공격 / 처음 보는 공격" 탐지율과 정상 오탐률 비교. IF\|LOF(OR)·IF&LOF(AND)·RF 조합과 "IF가 놓치고 LOF가 잡은 구간 수"도 집계 (`docs/12`) |
 | `train_export.py` | **학습된 모델을 .joblib로 저장** — 정상 데이터로 IF·LOF, 정답지 있으면 RF까지 학습해 스케일러·피처순서·설정과 함께 묶어 저장 (배포·인수인계용) |
