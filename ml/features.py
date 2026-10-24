@@ -44,6 +44,10 @@ NGINX_RE = re.compile(r'(?P<ip>\d{1,3}(?:\.\d{1,3}){3}|[0-9a-fA-F:]+) \S+ \S+ '
 SSH_FAIL_RE = re.compile(r"sshd\[\d+\]: (?:Failed password|Invalid user)")
 SSH_IP_RE = re.compile(r"from (\d{1,3}(?:\.\d{1,3}){3})")
 NUM_SEG_RE = re.compile(r"/(\d+)(?=/|$)")
+# crAPI 등은 객체 ID로 UUID를 쓴다(예: /identity/api/v2/vehicle/<uuid>/location).
+# 숫자 ID와 같게 {id}로 템플릿화하고 BOLA 객체 집합에 넣어, uniq_paths 폭증·객체 미집계를 막는다.
+UUID_SEG_RE = re.compile(r"/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-"
+                         r"[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?=/|$)")
 WRITE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # uniq_objects는 "주인만 봐야 하는 자원"의 ID만 센다 (BOLA 징후). 상품처럼 공개 자원은 제외 —
 # 정상 쇼핑객이 상품을 많이 보면 공격자와 구분이 안 되기 때문. 경로 템플릿 접두어, --owned-path로 교체 가능.
@@ -83,9 +87,11 @@ def interval_cv(ts_list) -> float:
 
 
 def path_template(path: str):
-    """'/rest/basket/6?x=1' → ('/rest/basket/{id}', ['6']). 숫자 경로 조각 = 객체 ID."""
+    """'/rest/basket/6?x=1' → ('/rest/basket/{id}', ['6']). 숫자/UUID 경로 조각 = 객체 ID."""
     p = path.split("?", 1)[0]
-    return NUM_SEG_RE.sub("/{id}", p), NUM_SEG_RE.findall(p)
+    ids = UUID_SEG_RE.findall(p) + NUM_SEG_RE.findall(p)
+    tmpl = NUM_SEG_RE.sub("/{id}", UUID_SEG_RE.sub("/{id}", p))
+    return tmpl, ids
 
 
 def is_owned(tmpl: str) -> bool:
