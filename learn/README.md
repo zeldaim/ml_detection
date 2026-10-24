@@ -7,6 +7,7 @@
 | 파일 | 내용 |
 |---|---|
 | **`GLOSSARY.md`** | **용어사전 — ML·LLM·보안 처음 배우는 사람용.** 프로젝트의 모든 학술 용어를 쉬운 말+비유+"어디 나오나"로. 모르는 단어 나오면 여기서 Ctrl+F |
+| **`ML_WALKTHROUGH.md`** | **이 프로젝트로 배우는 ML — 알고리즘 동작원리·피처·전처리 판단.** 판다스 책 대신. 각 모델(IF/LOF/AE/RF)이 왜 그렇게 동작하는지 우리 실험 숫자로. ML 지식이 목표면 여기부터 |
 | `pandas_tutorial.py` | pandas 한 바퀴 (읽기→선택→필터→정렬→groupby→새열→merge→집계→P/R/F1→저장). 전부 `data/features_combined.csv`로 |
 
 ```bash
