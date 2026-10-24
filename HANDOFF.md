@@ -1,7 +1,20 @@
 # 이어가기 (HANDOFF) — 현재 상태와 다음 할 일
 
-> 다음에 작업을 이어갈 때 **여기부터 읽는다.** 마지막 업데이트: 2026-10-24.
-> 빠른 복귀: `pip install -r requirements.txt` → `bash run_demo.sh`(또는 `./run_demo.ps1`) → 아래 "다음 할 일" 1번.
+> 다음에 작업을 이어갈 때 **여기부터 읽는다.** 마지막 업데이트: 2026-10-25.
+> 빠른 복귀: `pip install -r requirements.txt` → `bash run_demo.sh` → 아래 "다음 할 일".
+
+## 0. 플라이휠 1차 (2026-10-25 진행 — 실제 로그 검증)
+
+> 전체 서사·수치: `docs/21`. 원리/편향분산/LLM한계: `docs/19`. API 데이터셋 설계: `docs/20`. DB는 별도 phase: `docs/22`. 초보 용어: `learn/GLOSSARY.md`.
+
+- **실제 로그로 H5 재현**: 실제 Juice Shop nginx 로그에서 IF 느린공격 놓침·LOF/AE 보완 재현(`docs/21` §F·G).
+- **합성 vs 실제**: 합성은 전부 1.00 포화(모델 건강은 퍼뮤테이션으로 확인) → 실제선 **LOF 우수, IF 느린공격 취약, AE 분포 민감**으로 갈림.
+- **AE 분포 shift**: 서로 다른 정상 분포 합치면 AE 오탐 폭증(편향 실례). 정상 보강으로 완화(`docs/21` §G·H).
+- **정상 생성기 속도 교훈**: 너무 빠른 정상은 harvest 공격과 인위적 겹침 → **현실적 간격 필수**(§I). 운영 후보 현재 **LOF**(실제 1.00/0.06~0.15).
+- **플라이휠 누적셋** `data/dataset_web.csv` ≈569행(gitignore), 출처 6종(합성 2+실제 4). 장치 `ml/accumulate.py`.
+- **버전 모델 전부 보존** `models/experiments/` + `CHANGELOG.md`(contamination 스윕 4종 + 실제 2종).
+- **생성기**: 합성 로그 `tools/gen_synth_log.py`(10종), 실제 트래픽 `collect_kit/target_side/`(타겟서 IP별칭, 다중출발지).
+- **진행 중**: #2 = `fastclient.sh`(하드 네거티브, 빠른 합법 클라이언트)로 `endpoint_entropy`가 harvest와 가르는지.
 
 ## 1. 지금 어디까지 왔나 (완료)
 
