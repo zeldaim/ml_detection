@@ -46,6 +46,13 @@ H5(IF 놓침·LOF 보완) 실제 5구간 재현.
 DB 아크(docs/22): 하드네거티브는 **파생 피처 '반복도(q_count/uniq_templates)'**로 scrape 0/8→8/8.
 UEBA는 웹 §K 코드 전이. 출발지 귀속만 실제 필요. 운영후보 LOF.
 
+## ★ 현재 최선 모델 (운영 후보, 2026-10-25)
+
+**`models/model_web_v3_canon_rel.joblib`** — 웹 정본(real_canon 246구간) + **UEBA 상대피처(rel_*) 포함(11피처)**.
+- 성능: **IF|LOF|AE 0.97 / 오탐 0.00**(c0.05). rel 추가로 앙상블 0.88→0.97(§J·K·L 반영).
+- 재현: `datasets/real_web/` + `relative_features.py` → `train_export.py`.
+- experiments/ 의 이전 모델들은 실험 기록용. **배포 후보는 이 v3.**
+
 ## 다음 버전 규칙
 - 새 바퀴: `model_<데이터셋>_<설정>_v<n>.joblib` 로 저장 + 이 표에 행 추가(설정·지표·해석).
 - 실제 데이터 버전은 `model_real_*` 로 구분. 운영 후보는 `models/model.joblib` 로 승격(그때 기존 것 archive).
