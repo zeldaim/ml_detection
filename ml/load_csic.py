@@ -9,9 +9,10 @@ CSIC 2010은 스페인 CSIC의 웹 요청 모음(정상/비정상 라벨). 우�
      anomalousTrafficTest.txt 형태 또는 CSV 변환본이 있다.
    형식이 미러마다 달라, 이 스크립트는 흔한 두 형식을 지원하고 안 맞으면 --inspect로 샘플을 보여준다.
 
-이 변환기는 '요청 단위' CSIC을 우리 'IP×구간' 피처로 바로 매핑하진 않는다(CSIC엔 IP·시각이 없음).
-대신 요청 묶음을 가짜 구간으로 묶어 웹 피처 근사치를 만든다 → 모델 틀 교차검증용.
-정밀 비교가 필요하면 요청 단위 분류(별도)로 가야 한다(README 주석 참고).
+CSIC 공격은 '요청 내용(페이로드)' 공격(SQLi·XSS·traversal)이다 — 우리 랩의 '행위' 공격(BOLA·느린공격)과
+다른 종류(docs/16). 그래서 행위 피처가 아니라 **내용 피처**(sqli/xss/traversal 토큰, 특수문자 비율,
+경로 길이, 파라미터 수)를 뽑는다. CSIC엔 IP·시각이 없어 요청 win개를 한 구간으로 묶어 집계(max 위주).
+정상=2026-01-01, 공격=2026-01-02로 시각을 찍어 --train-until로 정상만 학습할 수 있게 한다.
 
 사용:
   python ml/load_csic.py --normal normalTraffic.txt --anomalous anomalous.txt --out data/features_csic.csv --answer data/answer_csic.csv
@@ -26,9 +27,15 @@ from collections import Counter, defaultdict
 
 # CSIC 요청 한 건을 느슨하게 파싱: "METHOD path?query HTTP/1.1" 라인 + 이어지는 헤더/본문
 REQ_RE = re.compile(r"^(GET|POST|PUT|DELETE|HEAD|PUT|PATCH)\s+(\S+)\s+HTTP", re.I)
-NUM_SEG = re.compile(r"/(\d+)(?=/|$|\?)")
-SQLI = re.compile(r"(union|select|sleep\(|information_schema|or\s+1=1|--|/\*|<script|%27|')", re.I)
-OWNED = ["/basket", "/order", "/user", "/account", "/tienda1/publico/caracteristicas"]  # 예시, 데이터에 맞게
+# CSIC 공격은 '요청 내용(페이로드)' 공격 → 내용 피처로 잡는다 (우리 행위 피처와 다른 종류, docs/16)
+SQLI = re.compile(r"(union\b|select\b|sleep\(|benchmark\(|information_schema|or\s+1\s*=\s*1|--|/\*|%27|'|;|\bdrop\b|\bexec\b)", re.I)
+XSS = re.compile(r"(<script|onerror\s*=|onload\s*=|alert\(|%3cscript|javascript:|<img|<svg|document\.cookie)", re.I)
+TRAVERSAL = re.compile(r"(\.\./|\.\.%2f|/etc/passwd|%2e%2e|\bcmd\b|/bin/)", re.I)
+SPECIAL = re.compile(r"[^A-Za-z0-9/_\-.?=&%: ]")   # 특수문자(페이로드일수록 많음)
+
+# 요청 1건 → 내용 피처 dict
+CONTENT_FEATURES = ["req_count", "uniq_paths", "path_len_max", "param_count_max",
+                    "body_len_max", "special_ratio_max", "sqli_hits", "xss_hits", "traversal_hits"]
 
 
 def inspect(path, n=15):
@@ -73,27 +80,35 @@ def features_from(requests, label, win, start_idx):
     return rows, idx + 1
 
 
+def _special_ratio(s):
+    return round(len(SPECIAL.findall(s)) / len(s), 4) if s else 0.0
+
+
 def _agg(reqs, label, idx):
-    paths, objs, writes, errs, sqli = set(), set(), 0, 0, 0
+    """구간(요청 묶음) → 내용 피처. 공격은 한 요청만 악성이어도 되므로 max 위주."""
+    paths = set()
+    path_len = param = body = spec = sqli = xss = trav = 0
     for method, path, raw in reqs:
-        p = path.split("?")[0]
-        tmpl = NUM_SEG.sub("/{id}", p)
-        paths.add((method, tmpl))
-        if any(p.startswith(o) for o in OWNED):
-            objs.update(NUM_SEG.findall(path))
-        if method in ("POST", "PUT", "PATCH", "DELETE"):
-            writes += 1
-        if SQLI.search(raw):
-            sqli += 1
+        # 요청 라인 아래 본문(헤더 제외 근사: 빈 줄 이후). CSIC POST 본문에 페이로드가 많다.
+        body_txt = raw.split("\n\n", 1)[1] if "\n\n" in raw else ""
+        probe = path + " " + body_txt            # 경로+쿼리+본문을 함께 검사
+        paths.add((method, path.split("?")[0]))
+        path_len = max(path_len, len(path))
+        param = max(param, path.count("=") + body_txt.count("="))
+        body = max(body, len(body_txt.strip()))
+        spec = max(spec, _special_ratio(probe))
+        sqli += 1 if SQLI.search(probe) else 0
+        xss += 1 if XSS.search(probe) else 0
+        trav += 1 if TRAVERSAL.search(probe) else 0
     n = len(reqs)
-    # 우리 웹 피처 열 이름에 최대한 맞춘다(없는 건 0)
+    # 시각은 단조 증가(정상=1일, 공격=2일) → --train-until로 정상만 학습 가능
+    day = "01" if label == "normal" else "02"
     return {
-        "ip": f"csic-{label}-{idx}", "window_start": f"2026-01-01T00:{idx % 60:02d}:00Z",
-        "req_count": n, "max_req_1min": n, "uniq_paths": len(paths),
-        "uniq_objects": len(objs), "err_ratio": round(errs / n, 4),
-        "write_ratio": round(writes / n, 4), "interval_cv": 1.0,
-        "endpoint_entropy": round(len(paths) / n, 4), "ssh_fail": 0,
-        "_sqli": sqli, "_label": label,
+        "ip": f"csic-{label}-{idx}",
+        "window_start": f"2026-01-{day}T{idx // 60 % 24:02d}:{idx % 60:02d}:00Z",
+        "req_count": n, "uniq_paths": len(paths), "path_len_max": path_len,
+        "param_count_max": param, "body_len_max": body, "special_ratio_max": spec,
+        "sqli_hits": sqli, "xss_hits": xss, "traversal_hits": trav, "_label": label,
     }
 
 
@@ -113,10 +128,9 @@ def main():
     if not (args.normal and args.anomalous):
         ap.error("--normal 과 --anomalous 가 필요 (또는 --inspect)")
 
-    cols = ["ip", "window_start", "req_count", "max_req_1min", "uniq_paths", "uniq_objects",
-            "err_ratio", "write_ratio", "interval_cv", "endpoint_entropy", "ssh_fail"]
+    cols = ["ip", "window_start"] + CONTENT_FEATURES
     nrows, idx = features_from(iter_requests(args.normal), "normal", args.window, 0)
-    arows, _ = features_from(iter_requests(args.anomalous), "attack", args.window, idx)
+    arows, _ = features_from(iter_requests(args.anomalous), "attack", args.window, 0)
     allrows = nrows + arows
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
@@ -125,17 +139,18 @@ def main():
         w.writeheader()
         for r in allrows:
             w.writerow({c: r[c] for c in cols})
-    # 정답지: 비정상 구간을 공격으로 (IP형)
     with open(args.answer, "w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["ip", "label", "type"])
         for r in arows:
             w.writerow([r["ip"], "attack", "csic_anomalous"])
     print(f"정상 구간 {len(nrows)} · 공격 구간 {len(arows)} → {args.out}")
+    print(f"피처(내용 기반): {', '.join(CONTENT_FEATURES)}")
     print(f"정답지: {args.answer}")
-    print("다음: python ml/models.py", args.out, "--methods iforest lof autoencoder --contamination 0.1")
-    print("      python ml/evaluate.py <detections> --answer", args.answer)
-    print("※ CSIC엔 IP·시각이 없어 '요청 묶음=구간'으로 근사했다. 정밀 비교는 요청 단위 분류 권장.")
+    print("\n다음 — 정상만으로 학습(--train-until)해야 공정하다. 정상=2026-01-01, 공격=2026-01-02 이므로:")
+    print(f"  python ml/models.py {args.out} --train-until 2026-01-02T00:00:00Z --methods iforest lof autoencoder --contamination 0.1 --out data/det_csic.csv")
+    print(f"  python ml/evaluate.py data/det_csic.csv --answer {args.answer}")
+    print("※ CSIC은 '요청 내용' 공격이라 내용 피처(sqli/xss/특수문자)로 잡는다. 우리 랩의 '행위' 탐지와는 다른 종류(docs/16).")
 
 
 if __name__ == "__main__":
