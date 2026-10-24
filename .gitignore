@@ -7,3 +7,4 @@ data/
 # 엣지 적재 스풀
 edge/spool*.jsonl
 data_old/
+data!/
