@@ -6,6 +6,7 @@
 
 | 파일 | 내용 |
 |---|---|
+| **`GLOSSARY.md`** | **용어사전 — ML·LLM·보안 처음 배우는 사람용.** 프로젝트의 모든 학술 용어를 쉬운 말+비유+"어디 나오나"로. 모르는 단어 나오면 여기서 Ctrl+F |
 | `pandas_tutorial.py` | pandas 한 바퀴 (읽기→선택→필터→정렬→groupby→새열→merge→집계→P/R/F1→저장). 전부 `data/features_combined.csv`로 |
 
 ```bash
