@@ -37,6 +37,15 @@
 AE 오탐 0.88 = 두 수집분 정상이 다른 분포(train≠eval normal, 편향 사례). 운영 후보 = **LOF**.
 H5(IF 놓침·LOF 보완) 실제 5구간 재현.
 
+## DB 모델 (2026-10-25)
+
+| 버전 파일 | 데이터 | contamination | 결과 |
+|---|---|---|---|
+| `model_db_arc_c005.joblib` | 합성 DB 아크(92구간: scrape·bola·sqli + 하드네거티브) | 0.05 | LOF 1.00/0.14 · IF 0.67 · AE 1.00/0.33 |
+
+DB 아크(docs/22): 하드네거티브는 **파생 피처 '반복도(q_count/uniq_templates)'**로 scrape 0/8→8/8.
+UEBA는 웹 §K 코드 전이. 출발지 귀속만 실제 필요. 운영후보 LOF.
+
 ## 다음 버전 규칙
 - 새 바퀴: `model_<데이터셋>_<설정>_v<n>.joblib` 로 저장 + 이 표에 행 추가(설정·지표·해석).
 - 실제 데이터 버전은 `model_real_*` 로 구분. 운영 후보는 `models/model.joblib` 로 승격(그때 기존 것 archive).
