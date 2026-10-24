@@ -13,7 +13,8 @@ alerts / archives / access.log ─▶ features.py ─▶ 피처 CSV ─▶ model
 | 파일 | 역할 |
 |---|---|
 | `features.py` | 로그 → IP × 구간 피처 표. alerts는 룰 알럿 피처, archives·nginx는 웹 요청 피처. `.gz`도 읽음 |
-| `models.py` | 같은 피처 표로 **룰 비교군**(레이트리밋 / Wazuh 레벨 10+) · Z-score(robust) · Isolation Forest · LOF · One-Class SVM · Autoencoder 실행, 점수는 모두 "클수록 이상" |
+| `relative_features.py` | (선택) **UEBA 상대 피처** — 출발지의 '평소 대비 배수' `rel_*` 열 추가(self/expanding/peer). features와 models 사이에 끼움. 절대 속도로 못 잡는 **자기 대비 급변(탈취형)**을 잡음 (`docs/21` §K). models·supervised 가 열을 자동 인식해 그대로 피처로 씀 |
+| `models.py` | 같은 피처 표로 **룰 비교군**(레이트리밋 / Wazuh 레벨 10+) · Z-score(robust) · Isolation Forest · LOF · One-Class SVM · Autoencoder 실행, 점수는 모두 "클수록 이상". 피처 열은 ip/window_start 뺀 전부 자동(= rel_* 포함) |
 | `evaluate.py` | 정답지로 구간 단위·IP 단위 TP/FP/FN/TN, Precision/Recall/F1, 공격별 탐지 여부 |
 | `supervised.py` | **지도(Random Forest) vs 비지도(Isolation Forest · LOF)** 비교 — 공격 사건·종류를 하나씩 빼고 학습해 "아는 공격 / 처음 보는 공격" 탐지율과 정상 오탐률 비교. IF\|LOF(OR)·IF&LOF(AND)·RF 조합과 "IF가 놓치고 LOF가 잡은 구간 수"도 집계 (`docs/12`) |
 | `train_export.py` | **학습된 모델을 .joblib로 저장** — 정상 데이터로 IF·LOF, 정답지 있으면 RF까지 학습해 스케일러·피처순서·설정과 함께 묶어 저장 (배포·인수인계용) |
@@ -42,6 +43,10 @@ python ml/explain_llm.py data/detections.csv data/features_alerts.csv --dry-run 
 python ml/features.py --nginx access.log.2.gz --nginx access.log.1 --nginx access.log --out data/features_web.csv
 python ml/models.py data/features_web.csv --train-until 2026-11-03T09:00:00Z --out data/det_web.csv
 python ml/evaluate.py data/det_web.csv --answer data/answer.csv
+
+# UEBA 상대 피처를 넣는 체인 (features → relative → models/supervised; rel_* 자동 포함)
+python ml/relative_features.py data/features_web.csv --mode self --cols req_count max_req_1min --out data/features_web_rel.csv
+python ml/supervised.py data/features_web_rel.csv --answer data/answer.csv --group-by type
 
 # 09 Q12 비교: 같은 기간을 --alerts만으로도 만들어 같은 모델·같은 정답지로
 python ml/features.py --alerts alerts.json --out data/features_alerts.csv
