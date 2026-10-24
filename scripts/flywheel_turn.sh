@@ -5,7 +5,7 @@
 #   사용:
 #     scripts/flywheel_turn.sh --log data/env_access.log --answer data/env_answer.csv --source env_2026-xx [옵션]
 #   옵션:
-#     --kind nginx|archives   입력 로그 종류 (기본 nginx)
+#     --kind nginx|archives|db   입력 로그 종류 (기본 nginx). db = MySQL general log → db_features.py
 #     --dataset PATH          누적셋 (기본 data/dataset_web.csv)
 #     --relative              UEBA 상대피처(rel_*) 추가 후 검증 (docs/21 §K)
 #     --contamination N       IF/LOF/AE 이상비율 (기본 0.1)
@@ -23,7 +23,13 @@ export PYTHONUTF8=1
 F="${LOG%.log}_features.csv"
 
 echo "== 1) 피처 추출 ($KIND) =="
-python "$ML/ml/features.py" --$KIND "$LOG" --out "$F" | tail -1
+if [ "$KIND" = "db" ]; then
+  # DB 계층: MySQL general log → db_features.py (웹과 다른 입력 경로). 기본 누적셋도 DB로.
+  python "$ML/edge/db_features.py" --log "$LOG" --out "$F" | tail -1
+  [ "$DS" = "data/dataset_web.csv" ] && DS="data/dataset_db.csv"
+else
+  python "$ML/ml/features.py" --$KIND "$LOG" --out "$F" | tail -1
+fi
 
 FEED="$F"
 if [ "$REL" = 1 ]; then
