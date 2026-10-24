@@ -118,6 +118,8 @@ def main():
     ap.add_argument("--anomalous", help="비정상 트래픽 파일")
     ap.add_argument("--inspect", help="형식만 확인할 파일")
     ap.add_argument("--window", type=int, default=20, help="요청 몇 개를 한 구간으로 묶을지")
+    ap.add_argument("--normal-test-frac", type=float, default=0.3,
+                    help="정상 중 평가셋(공격과 함께 채점)에 남길 비율. 0이면 정상 전부 학습 → 오탐 측정 불가")
     ap.add_argument("--out", default="data/features_csic.csv")
     ap.add_argument("--answer", default="data/answer_csic.csv")
     args = ap.parse_args()
@@ -131,6 +133,10 @@ def main():
     cols = ["ip", "window_start"] + CONTENT_FEATURES
     nrows, idx = features_from(iter_requests(args.normal), "normal", args.window, 0)
     arows, _ = features_from(iter_requests(args.anomalous), "attack", args.window, 0)
+    # 정상 일부를 day02(평가셋)로 옮긴다 → 학습 밖에 정상이 있어 오탐(FP)·Precision을 잴 수 있다
+    n_test = int(len(nrows) * args.normal_test_frac)
+    for r in nrows[len(nrows) - n_test:]:
+        r["window_start"] = r["window_start"].replace("2026-01-01", "2026-01-02")
     allrows = nrows + arows
 
     os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
@@ -144,10 +150,10 @@ def main():
         w.writerow(["ip", "label", "type"])
         for r in arows:
             w.writerow([r["ip"], "attack", "csic_anomalous"])
-    print(f"정상 구간 {len(nrows)} · 공격 구간 {len(arows)} → {args.out}")
+    print(f"정상 구간 {len(nrows)}(학습 {len(nrows)-n_test} + 평가 {n_test}) · 공격 구간 {len(arows)} → {args.out}")
     print(f"피처(내용 기반): {', '.join(CONTENT_FEATURES)}")
-    print(f"정답지: {args.answer}")
-    print("\n다음 — 정상만으로 학습(--train-until)해야 공정하다. 정상=2026-01-01, 공격=2026-01-02 이므로:")
+    print(f"정답지: {args.answer}  (평가셋 = 정상 {n_test} + 공격 {len(arows)} → 오탐·Precision 측정 가능)")
+    print("\n다음 — 정상만으로 학습(--train-until)해야 공정하다. 학습=2026-01-01, 평가=2026-01-02 이므로:")
     print(f"  python ml/models.py {args.out} --train-until 2026-01-02T00:00:00Z --methods iforest lof autoencoder --contamination 0.1 --out data/det_csic.csv")
     print(f"  python ml/evaluate.py data/det_csic.csv --answer {args.answer}")
     print("※ CSIC은 '요청 내용' 공격이라 내용 피처(sqli/xss/특수문자)로 잡는다. 우리 랩의 '행위' 탐지와는 다른 종류(docs/16).")
