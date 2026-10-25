@@ -20,6 +20,7 @@ general query log 켜기 (MySQL):
 """
 import argparse
 import csv
+import gzip
 import os
 import re
 import statistics
@@ -36,7 +37,7 @@ TABLE_RE = re.compile(r"\b(?:from|join|into|update)\s+`?(\w+)`?", re.I)
 # 정상 상품 조회가 BOLA 신호를 오염시키지 않도록 (웹의 uniq_objects 소유자원 제한과 같은 원리).
 OWNED_TABLES = {"orders", "order", "users", "user", "basket", "baskets", "basketitems",
                 "addresses", "address", "cards", "card", "payments", "payment", "wallets"}
-EQ_ID_RE = re.compile(r"=\s*(\d+)")                    # WHERE id = 5
+EQ_ID_RE = re.compile(r"=\s*'?(\d+)(?![\d.])'?")   # WHERE id = 5 / id = '5' (DVWA 등 PHP 앱은 따옴표로 감쌈). 5.99 같은 소수는 제외
 IN_LIST_RE = re.compile(r"\bin\s*\(([^)]*)\)", re.I)   # id IN (1,2,3) → 전체 리스트
 
 
@@ -113,7 +114,8 @@ def parse(path, win_sec, stats=None, force_host=None):
     conn_host = {}
     windows = defaultdict(Win)
     last = None  # (host, cmd, ts) 이어지는 줄 처리용
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+    opener = gzip.open if path.endswith(".gz") else open   # 로테이션된 .gz 도 그대로 (features.py 와 같게)
+    with opener(path, "rt", encoding="utf-8", errors="replace") as f:
         for line in f:
             if stats is not None:
                 stats["total"] += 1

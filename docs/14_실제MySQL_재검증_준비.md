@@ -1,6 +1,7 @@
 # 14. 실제 MySQL 로그로 DB 모델 재검증 — 준비
 
-> 작성일: 2026-10-24 · 전제: DB 모델(`models/db_model.joblib`)은 현재 **합성 로그**로 학습됨(`docs/13` §4·§7). 실제 MySQL 로그로 경향을 재확인한다.
+> 작성일: 2026-10-24 · **갱신 2026-10-25: 인프라는 `docs/28`(별도 DB VM 10.16.1.20 + 직접 만든 쇼핑몰 API `shopapi` + Prometheus + Wazuh manager 전용)로 확정.** §1·§2·§4·§5 를 그 구성에 맞춤.
+> 전제: DB 모델(`models/db_model.joblib`)은 현재 **합성 로그**로 학습됨(`docs/13` §4·§7). 실제 MySQL 로그로 경향을 재확인한다.
 
 ## 0. 지금 공백과 재검증 목표
 
@@ -17,18 +18,22 @@ Juice Shop은 SQLite라 MySQL 로그가 안 나온다. 시나리오가 "PHP + My
 
 | 후보 | 특징 | 비고 |
 |---|---|---|
-| **DVWA** | PHP+MySQL, SQLi·IDOR 난이도 조절 | 가장 가벼움, 교육용 표준 |
+| DVWA | PHP+MySQL, SQLi·IDOR 난이도 조절 | 가볍지만 주문·장바구니·REST API 없음 → **불채택** |
 | Mutillidae II | PHP+MySQL, OWASP 전종 취약점 | SQLi·BOLA 많음 |
 | bWAPP | PHP+MySQL | 취약점 폭넓음 |
-| 직접 만든 PHP 쇼핑몰 | 시나리오에 정확히 맞음 | 제작 비용 |
+| **직접 만든 PHP 쇼핑몰 API** | 시나리오에 정확히 맞음 | **채택(2026-10-25)** — 사양 `docs/28` §4-3 |
 
-Docker 예(별도 VM 또는 웹 VM 안, 웹/DB 티어 분리 권장 — `docs/13` §8):
-```bash
-# MySQL (general log 켤 수 있게)
-docker run -d --name shopdb -e MYSQL_ROOT_PASSWORD=labpass -p 3306:3306 mysql:8.0
-# PHP 취약 앱 (예: DVWA)
-docker run -d --name dvwa --link shopdb:db -p 8080:80 vulnerables/web-dvwa
+**결정(2026-10-25): 직접 만든 쇼핑몰 API `shopapi` + 별도 DB VM.** 구축 명령은 `docs/28` §4-2(DB VM)·§4-3(shopapi 사양·배포).
+DVWA 를 쓰지 않는 이유: 취약점 연습 페이지 모음이라 주문·장바구니·REST API 가 없어 BOLA 피처(`uniq_objects` 소유 경로, `distinct_where_ids` 소유 테이블)가 맞지 않고, 현실적인 쇼핑객 정상 흐름을 만들 수 없다(오탐을 줄이는 핵심이 현실적 정상, `docs/21` §L).
+
 ```
+웹 VM 10.16.1.10   nginx :8080 → shopapi(PHP-FPM)   ← 액세스 로그 /var/log/nginx/shopapi_access.log (2번째 칸 = 사용자 id)
+       │ 3306 (웹 VM 에서만 허용)
+DB VM 10.16.1.20   MySQL 8 (네이티브 설치, general log 는 실험 기간만)
+```
+- DB 를 웹 VM 안 Docker 로 두지 않는 이유: 호스트 지표(node_exporter)가 웹·DB 부하를 합쳐 보게 되어 호스트별 모델(`docs/27` §3-4)이 성립하지 않는다.
+  또 실제 티어처럼 DB 가 웹 VM 만 보는 **귀속 문제(§4)** 를 그대로 재현해야 검증 의미가 있다.
+- 이전 안(`docker run mysql` + `vulnerables/web-dvwa --link`)은 폐기.
 
 ## 2. MySQL general query log 켜기
 
@@ -37,10 +42,17 @@ SET GLOBAL general_log = 'ON';
 SET GLOBAL log_output  = 'FILE';          -- 파일로 (TABLE도 가능)
 SHOW VARIABLES LIKE 'general_log_file';   -- 경로 확인 (보통 /var/lib/mysql/<host>.log)
 ```
-Docker면 로그를 꺼내기:
+DB VM(네이티브 MySQL)에서는 **로그를 VM 밖으로 꺼내지 않고 그 자리에서 피처화**한다(쿼리 원문 = 개인정보, `edge/` 원칙):
 ```bash
-docker exec shopdb sh -c 'cat $(mysql -uroot -plabpass -N -e "SELECT @@general_log_file")' > data/general_real.log
+# DB VM 안 (저장소의 edge/db_features.py 만 복사해 두면 됨, 표준 라이브러리만 사용)
+LOG=$(mysql -uroot -N -e "SELECT @@general_log_file")      # 보통 /var/lib/mysql/<host>.log
+python3 db_features.py --log $LOG --check
+python3 db_features.py --log $LOG --out db_features_real.csv
+# 분석 PC 로는 CSV(숫자)만 가져온다
+scp root@10.16.1.20:db_features_real.csv data/features_db_real.csv
 ```
+- general log 는 **Wazuh 로도 보내지 않는다**(원문 유출·여러 줄 쿼리 쪼개짐·양 — `docs/28` §3). Wazuh 에는 `mysqld.log`(error/인증 실패)만.
+- 웹-DB 시간 상관(§4 옵션 A)을 하려면 general log 원문이 분석 PC 에 필요하다 → 이때만 실험 구간 로그를 가져오고, 끝나면 지운다.
 
 ⚠️ **주의**
 - general log는 **모든 쿼리를 기록** → 디스크·성능 부담. **실험 기간만 켜고 끈다**(`SET GLOBAL general_log='OFF'`).
@@ -63,6 +75,7 @@ docker exec shopdb sh -c 'cat $(mysql -uroot -plabpass -N -e "SELECT @@general_l
 ## 4. ⚠️ 핵심 공백 — 출발지 귀속(attribution)
 
 **실제로는 DB가 "앱 서버"만 본다.** PHP 앱이 하나의 DB 계정으로 접속하므로, general log의 Connect host가 전부 `app@웹서버IP`가 된다 → 공격자별로 못 나뉜다. `db_features.py --check`가 "출발지 1개"를 경고한다.
+`docs/28` 구성에서는 Connect host 가 전부 **`app@10.16.1.10`**(PHP-FPM 이 웹 VM 에서 접속)으로 찍힌다 — **경고가 뜨는 게 정상**이고, 이게 검증하려는 실제 조건이다.
 
 해결 옵션(재검증 전에 하나 택):
 
@@ -82,6 +95,7 @@ python edge/correlate.py --mode tier --db data/general_real.log     --out data/f
 python ml/supervised.py data/features_tier.csv --answer data/answer_tier.csv --group-by type --contamination 0.05
 
 # 옵션 A: 웹-DB 시간 상관 (웹 IP 행에 같은 구간 DB 집계 db_* 추가)
+#   docs/28 구성: --web 은 웹 VM 의 /var/log/nginx/shopapi_access.log, --db 는 DB VM 의 general log(실험 구간만 가져옴)
 python edge/correlate.py --mode join --web data/nginx.log --db data/general_real.log --out data/features_webdb.csv
 python ml/supervised.py data/features_webdb.csv --answer data/answer.csv --group-by type --contamination 0.05
 ```
@@ -110,6 +124,8 @@ python ml/classify_type.py data/features_db_real.csv --answer data/answer_db.csv
 ## 6. 성공 기준 체크리스트
 
 ```
+[ ] docs/28 §4-7 구축 체크리스트 통과 (DB VM·shopapi·node_exporter·Wazuh 에이전트·Prometheus)
+[ ] 모든 VM 시계 동기화 (chronyc tracking) — 정답지 시각과 5분 구간 정렬의 전제
 [ ] PHP+MySQL 취약 앱 + MySQL general log 켜짐 (실험 기간만)
 [ ] 정상/공격 기간 분리 + answer_db.csv (UTC)
 [ ] db_features --check: 미파싱 0 (아니면 정규식 보강)
@@ -125,3 +141,6 @@ python ml/classify_type.py data/features_db_real.csv --answer data/answer_db.csv
 - 헤더 줄(`/usr/sbin/mysqld, Version: ...`)·빈 명령 등은 미파싱으로 남아도 됨(무시 가능).
 - 시각 형식이 다르면(`YYMMDD HH:MM:SS` 구형) `LINE_RE`·`_ts()`를 그 형식에 맞춘다.
 - Connect host가 `user@localhost`면 §4 귀속 문제 → 옵션 A/B/C.
+- **id 를 따옴표로 감싼 쿼리**(PHP 앱에서 흔함: `WHERE user_id = '5'`)는 줄 파싱은 되지만 예전 `EQ_ID_RE` 가 id 를 못 셌다(`--check` 로 안 보이는 조용한 누락).
+  2026-10-25 보강: `= '5'` 도 잡고 `5.99` 같은 소수는 제외. 기존 합성 DB 아크 피처는 바이트 단위로 동일함을 확인.
+  새 앱을 붙이면 `python -c "from db_features import where_ids; print(where_ids(\"<실제 쿼리 한 줄>\"))"` 로 먼저 확인.

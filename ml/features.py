@@ -214,6 +214,9 @@ def main():
                          "예: --owned-path /api/Orders/{id}")
     args = ap.parse_args()
     if args.owned_path:
+        bad = [p for p in args.owned_path if not p.startswith("/")]
+        if bad:   # Git Bash 는 /로 시작하는 인자를 C:/Program Files/Git/... 로 바꾼다 → uniq_objects 가 조용히 0
+            ap.error(f"--owned-path 는 /로 시작해야 함: {bad} — Git Bash 라면 MSYS_NO_PATHCONV=1 을 앞에 붙이거나 PowerShell 에서 실행")
         OWNED_PREFIXES[:] = args.owned_path
     if not (args.alerts or args.archives or args.nginx):
         ap.error("--alerts / --archives / --nginx 중 하나는 필요")
