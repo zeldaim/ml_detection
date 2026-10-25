@@ -11,6 +11,7 @@
 | `real_canon_answer.csv` | IP형 정답지(공격 전용 IP) |
 | `real_canon_access.log.gz` | 원본 nginx 로그(gzip) — 피처 재추출용 |
 | `nat_lab_access.log` | NAT 실측(사용자키 vs IP키, `docs/25` §5-2). user 필드 포함 |
+| `boost_bola_slow_*` | **bola_slow 표본 보강**(6 IP 동시, +36구간). H5 핵심 공격 표본 2~6→47로(리뷰 #4 완화책① 실행). uniq_objects≈20·interval_cv 0 |
 
 재현:
 ```bash
