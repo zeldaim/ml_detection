@@ -4,6 +4,8 @@
 > 데이터센터 인텔리전트 보안 엔지니어 과정 프로젝트 · PHP/MySQL 쇼핑몰 API 시나리오 · scikit-learn only(딥러닝 라이브러리 불필요).
 
 > 🔖 **이어서 작업하려면 [`HANDOFF.md`](HANDOFF.md)부터** — 현재 상태·다음 할 일·재현법.
+> 📥 **다른 인프라 로그로 실험 = [`inbox/README.md`](inbox/README.md)** — 폴더에 파일 넣고 `python ml/ingest.py inbox/<이름> --retrain` 한 줄. 실시간 수집(Logstash·Filebeat·Fluent Bit)과 결정 근거는 `docs/29`.
+> 📇 **운영 후보 모델 = [`models/MODEL_CARD.md`](models/MODEL_CARD.md)** — 실제 랩 로그 기준 IF|LOF|AE 0.91±0.04 · 평가 정상 오탐 0/65, 용도·한계·재현까지. 피처 확정 근거 `docs/27`.
 
 ## 한 장 요약
 
@@ -90,6 +92,7 @@ python edge/edge_agent.py --kind db --log <mysql log> --collector http://<중앙
 | 계획 | `docs/07`(메인 컨셉), `docs/08`(환경 구축), `docs/10`(7~8주차 파이프라인) |
 | **결과** | **`docs/13`(종합 결과)** — 웹·DB 2계층, 2층 구조 결론 |
 | 심화 | `docs/14`(실제 MySQL 재검증), `docs/15`(API 공격·피처 카탈로그), `docs/16`(레퍼런스) |
+| **확정** | **`docs/27`(피처셋 v1 확정 + node_exporter 입구)**, **`docs/28`(랩 확장: DB VM·Prometheus·Wazuh 배치 런북)**, **`docs/29`(로그 수집·저장 결정과 비교)**, **`models/MODEL_CARD.md`(모델 카드)**, `docs/26`(탐지 아키텍처) |
 | 기록 | `docs/09`(설계 논의 히스토리), **`docs/17`(검증 함정·디버깅 로그)**, `models/README.md`(모델 체인지로그) |
 | 그림 | **`docs/18`(토폴로지·다이어그램 — draw.io 밑그림)** |
 | 공부 | `learn/`(내 데이터로 배우는 pandas·ML) |
@@ -104,15 +107,19 @@ python edge/edge_agent.py --kind db --log <mysql log> --collector http://<중앙
 | `ml/classify_type.py` | RF 다중 분류 — 공격 **종류** 맞히기 |
 | `ml/train_export.py` · `predict.py` | 학습 모델 저장(.joblib) · 저장 모델로 판정 |
 | `ml/load_csic.py` | CSIC 2010 공개 데이터 → 내용 피처 (교차검증) |
-| `edge/` | 엣지 피처 추출(웹·DB) + 중앙 collector + 출발지 귀속(`correlate.py`) |
+| **`ml/ingest.py`** | **폴더 투입구** — 로그 종류 자동 인식 → 피처 → 판정/재학습 → `REPORT.md`(돌린 명령 포함) |
+| `ml/feature_spec.py` · `ablation.py` | **확정 피처셋**(web_v1·db_v1·host_v1) 단일 출처 · drop-one 소거 실험(seed 평균) |
+| `ml/relative_features.py` · `per_key_eval.py` | UEBA 상대 피처 · 통합 vs 키(호스트)별 기준선 모델 비교 |
+| `edge/host_metrics.py` | **node_exporter 지표 → 호스트 피처** (Prometheus API / 저장 JSON / `/metrics` 스냅샷) |
+| `edge/` | 엣지 피처 추출(웹·DB·호스트 지표) + 중앙 collector + 출발지 귀속(`correlate.py`) |
 | `consumer/` | 단순 자동 소비자 |
-| `tools/` | 트래픽 생성기 (정상·공격·DB 합성) |
+| `tools/` | 트래픽 생성기 (정상·공격·DB·호스트 지표 합성) |
 | `models/` | 학습된 모델 + `archive/`(이전 버전) + 체인지로그 |
 | `detector/wazuh_ml_detect.py` | 초기 단일 파일 탐지기 (alerts.json → IF) |
 
 ## 주의
 
-- 공격 재현은 **직접 통제하는 랩에서만**. Juice Shop·DVWA 등은 의도적 취약 앱 → 외부 노출 금지.
+- 공격 재현은 **직접 통제하는 랩에서만**. Juice Shop·shopapi 등은 의도적 취약 앱 → 외부 노출 금지.
 - 자동 차단은 오탐 시 정상 IP를 끊을 수 있음 — 랩에서만.
 
 ## 관련
