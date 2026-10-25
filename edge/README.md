@@ -20,6 +20,7 @@
 | `edge_agent.py` | 호스트에서 돈다. `--kind web`(nginx) / `--kind db`(MySQL) → 피처 벡터를 collector로 전송 |
 | `db_features.py` | **MySQL general query log → DB 피처** (BOLA·SQLi·대량수집·AI 간격). 원본 쿼리는 숫자로만 요약 |
 | `correlate.py` | **출발지 귀속**(docs/14 §4): `--mode tier`(DB 티어 전체 단위) / `--mode join`(웹-DB 시간 상관으로 웹 IP에 db_* 피처 결합) |
+| `host_metrics.py` | **node_exporter 지표 → 호스트 피처**(`host_v1` 12개: CPU 지속·송신 편중·연결 수…). Prometheus API / 저장 JSON / `/metrics` 스냅샷(`--collect`, Prometheus 없는 랩) 3입력. `docs/27` §3 |
 | `collector.py` | 중앙 수신·판정·적재. 웹 벡터는 `.joblib`로, DB 벡터는 임시 규칙으로 1차 경보 |
 
 ## DB 피처 (db_features.py) — DB 보안 관점
@@ -72,6 +73,21 @@ python edge/collector.py --model models/model.joblib --db-model models/db_model.
 결과(합성, scikit-learn 1.9.1): E2 탐지율 LOF 1.00 / IF 0.78(IF가 놓치고 LOF가 잡은 느린 BOLA 2구간, H5), 종류 분류 5/9 — sqli·scrape는 정확, 느린 bola는 일부 정상으로. **웹 계층과 같은 경향**이 DB 계층에서도 재현됨.
 `--db-model` 없이 돌리면 임시 규칙(SQLi 토큰>0, WHERE id ≥ 임계값)으로 1차 경보한다.
 한계: 합성 데이터라 경향 확인용. 실제 MySQL 로그로 재검증 필요. DB 사용자가 하나면 쿼리의 출발지 구분 보강 필요.
+
+## 호스트 지표 (host_metrics.py) — 자원/가용성 공격
+
+로그가 못 보는 채굴·연결 폭주·유출을 본다(API 로직 공격엔 무신호 — `docs/26` §2). **호스트마다 따로 학습**한다(통합 모델은 한 호스트의 이상이 다른 호스트의 평소에 묻힘).
+
+```bash
+# Prometheus 없는 랩: 분석 PC 에서 /metrics 를 15초마다 떠 둔다 (최소 하루 = 계절성 1주기)
+python edge/host_metrics.py --collect http://10.16.1.10:9100/metrics --out-dir data/host_snap --interval 15 --duration 86400
+python edge/host_metrics.py --snapshots data/host_snap --out data/host_features.csv
+# Prometheus 가 있으면
+python edge/host_metrics.py --prom http://<prom>:9090 --start 2026-10-25T00:00:00Z --end 2026-10-26T00:00:00Z --out data/host_features.csv
+# 통합 vs 호스트별 모델 비교 → 호스트별 학습
+python ml/per_key_eval.py data/host_features.csv --answer data/host_answer.csv
+```
+합성 시험: `python tools/gen_host_metrics.py` → `--matrix data/host_matrix.json.gz`.
 
 ## 주의
 
