@@ -11,7 +11,7 @@
 | ② 껍데기·파이프라인 미연결 | **반증** | 로그→피처→상대피처→검증 완주 + train(train_export)→inference(predict) 연결 확인 |
 | ③ 데이터 누수 / 가짜 100% | **반증** | 퍼뮤테이션(가짜공격≪진짜), IP/UA 피처 미사용, leave-one-group-out+train-until |
 | ④ 매직넘버·땜질 | **대체로 OK** | contamination·window 는 문서화+스윕(§D). 임의값 아님 |
-| ⑤ 예외처리·입력검증 부재 | **일부 인정(실제 약점)** | features.py 는 있음(깨진 줄·인코딩), **models/evaluate/db_features 는 try/except 0** |
+| ⑤ 예외처리·입력검증 부재 | **인정→수정함** | features.py 는 기존 처리. models/evaluate/db_features 에 **파일없음·빈파일·필수열 검증 추가**(깔끔한 에러 메시지로 종료) |
 
 ## 상세
 
@@ -36,10 +36,10 @@ AI 코드의 최대 함정. 우리는 **다층으로 차단**:
 - `contamination`(0.1→0.01 스윕, §D), `window`(5분, 문서화), `n_neighbors`(LOF) 등은 **의미·근거 문서화**.
 - 개선 여지: 일부 임계값을 상단 상수/인자로 더 노출하면 좋음(경미).
 
-### ⑤ 예외처리·입력검증 (실제 약점 — 인정)
-- `features.py`: 깨진 JSON 줄 skip, 인코딩 errors=replace, 정규식 미스 skip → OK.
-- **`models.py`·`evaluate.py`·`db_features.py`: try/except 0개.** 잘못된 포맷·빈 파일·숫자 아닌 값 들어오면 바로 죽을 수 있음.
-- **조치 필요(미래)**: 입력 검증(빈 파일·필수 열 확인)·예외 래핑 추가. 현재는 통제된 입력에서만 돌림. (known issue)
+### ⑤ 예외처리·입력검증 (인정 → 수정 완료)
+- `features.py`: 깨진 JSON 줄 skip, 인코딩 errors=replace, 정규식 미스 skip → 기존 OK.
+- **수정함**: `models.py`·`evaluate.py`·`db_features.py` 에 **파일 없음·빈 파일·필수 열(window_start) 검증** 추가 → 잘못된 입력 시 **깔끔한 에러 메시지로 종료**(스택트레이스 크래시 대신). 스모크 테스트로 확인(나쁜 입력→명확한 에러, 정상 입력→동작 유지).
+- 남은 개선: 숫자 아닌 값 등 더 세밀한 검증은 추후.
 
 ---
 

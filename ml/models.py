@@ -129,9 +129,14 @@ def main():
 
     import numpy as np
 
+    import os
+    if not os.path.isfile(args.features):
+        sys.exit(f"입력 피처 파일 없음: {args.features}")
     rows = list(csv.DictReader(open(args.features, encoding="utf-8")))
     if not rows:
-        sys.exit("피처 표가 비어 있음")
+        sys.exit(f"피처 표가 비어 있음: {args.features}")
+    if "window_start" not in rows[0]:
+        sys.exit(f"피처 표에 'window_start' 열이 없음(형식 확인): {args.features}")
     cols = [c for c in rows[0] if c not in ("ip", "window_start") and c not in args.drop]
     X = np.array([[float(r[c] or 0) for c in cols] for r in rows])
 

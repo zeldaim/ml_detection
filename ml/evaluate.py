@@ -61,9 +61,15 @@ def main():
     ap.add_argument("--include-train", action="store_true", help="학습 구간도 채점")
     args = ap.parse_args()
 
+    import os
+    for p, what in ((args.answer, "정답지"), (args.detections, "탐지결과")):
+        if not os.path.isfile(p):
+            sys.exit(f"{what} 파일 없음: {p}")
     attacks = load_answer(args.answer)
     win = timedelta(minutes=args.window)
     dets = list(csv.DictReader(open(args.detections, encoding="utf-8")))
+    if not dets:
+        sys.exit(f"탐지결과가 비어 있음: {args.detections}")
     has_test = any(d["in_train"] == "0" for d in dets)
     if has_test and not args.include_train:
         dets = [d for d in dets if d["in_train"] == "0"]

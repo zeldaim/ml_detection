@@ -160,6 +160,9 @@ def main():
                     help="파싱 커버리지만 점검(실제 로그 형식이 맞는지). 미파싱 줄 샘플 출력")
     args = ap.parse_args()
 
+    import os
+    if not os.path.isfile(args.log):
+        raise SystemExit(f"MySQL general log 파일 없음: {args.log}")
     win_sec = int(args.window * 60)
     stats = {"total": 0, "connect": 0, "query": 0, "cont": 0, "unparsed": 0, "samples": []}
     windows = parse(args.log, win_sec, stats)
