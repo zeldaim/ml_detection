@@ -2,7 +2,6 @@ __pycache__/
 *.pyc
 .venv/
 .omc/
-data/
 # 외부 인프라 로그 투입구 — 사용법 README 만 커밋
 inbox/*
 !inbox/README.md
@@ -13,3 +12,5 @@ deploy/collect/certs/
 edge/spool*.jsonl
 data_old/
 data!/
+# retrain_2026-10-25.sh 기본 출력(원본 대조용 재학습본)
+models/_retrained/

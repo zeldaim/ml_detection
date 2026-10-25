@@ -34,7 +34,7 @@
 
 **DB (`docs/22`, 착수):** 합성 바퀴서 H5 재현. 공격별 신호(BOLA=distinct_where_ids·SQLi=sqli_token_hits·scrape=q_count). 하드네거티브는 **파생 '반복도'**로 scrape 0/8→8/8. UEBA 전이. 누적 `dataset_db.csv`. 실제는 MySQL 티어 후.
 
-**자산:** 누적 `data/dataset_web.csv`(gitignore, ~668행·출처 다수)·`dataset_db.csv`. 모델 버전 전부 `models/experiments/`+CHANGELOG. 자동화 `scripts/flywheel_turn.sh`(web/db). 생성기 `tools/gen_synth_log.py`·`gen_db_arc.py`·`collect_kit/target_side/`.
+**자산:** 누적 `data/dataset_web.csv`(~668행·출처 다수)·`dataset_db.csv`. 모델 버전 전부 `models/experiments/`+CHANGELOG. 자동화 `scripts/flywheel_turn.sh`(web/db). 생성기 `tools/gen_synth_log.py`·`gen_db_arc.py`·`collect_kit/target_side/`.
 
 **다음(막힘/미래):** 실제 다환경 검증·DB 실제 MySQL·사용자키 운영 적용 = **팀 인프라 후**. 같은 랩 추가 축적은 수확체감(멈춤 권장). 재개는 `flywheel_turn.sh` 한 명령.
 
@@ -70,7 +70,7 @@
 - **확장 예정(`docs/28`)**: DB VM `10.16.1.20`(MySQL 8) · 웹 VM `:8080` shopapi · node_exporter 두 VM · Prometheus 분석 PC `:9090` · Wazuh manager 전용(2GB)
 - **공격**: Kali VM. **ML 분석**: 호스트 PC(Windows) `10.16.1.1`. 네트워크: VMnet8 NAT `10.16.1.0/24`(GW·DNS `10.16.1.2`)
 - **Python**: 로컬 3.15 + scikit-learn 1.9.1 + pandas 3.1 (검증 환경: 3.12/1.9.1)
-- **데이터**: `data/`는 .gitignore(저장소에 없음) → 생성기(`tools/`)로 재생성하거나 scp로 가져옴. 공개 CSIC은 `docs/16`에서 수동 다운로드.
+- **데이터**: `data/`는 저장소에 포함(2026-10-25부터, 공개 CSIC `data/csic/` 포함). 생성기(`tools/`)로 재생성도 가능.
 
 ## 5. 재현·이어가기 명령
 

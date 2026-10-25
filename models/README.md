@@ -47,5 +47,8 @@ python ml/train_export.py /tmp/c_rel.csv --answer datasets/real_web/real_canon_a
 python ml/train_export.py data/features_db.csv --answer data/answer_db.csv --contamination 0.05 --out models/db_model.joblib
 ```
 
+2026-10-25 에 만든 10개(experiments/ 전부 + v3 archive + v3.1)는 한 번에: `bash models/retrain_2026-10-25.sh`
+— `models/_retrained/` 에 다시 학습하고 `tools/compare_bundles.py` 로 원본과 같은지 대조한다(모두 OK 확인됨).
+
 > 다음 버전을 만들 때도: ① 현재 파일을 `archive/model_vN_설명.joblib`로 복사 → ② 재학습 → ③ 이 README에 변경 설명 추가.
-> 학습 데이터(`data/`)는 .gitignore라 저장소엔 없음. 모델만 커밋한다.
+> 학습 데이터(`data/`)도 저장소에 포함한다(2026-10-25부터) — 모델과 함께 커밋.

@@ -1,0 +1,4 @@
+ip,label,type
+10.16.2.201,attack,scrape
+10.16.2.205,attack,bola
+10.16.2.206,attack,sqli

@@ -1,7 +1,7 @@
 # 실험 모델 버전 기록 (플라이휠)
 
 > 최종만 남기지 않고 **설정별·바퀴별로 전부 보존**한다. 각 모델은 재현 가능(같은 데이터·seed).
-> 학습 데이터(`data/`)는 gitignore라 저장소엔 없음 — 생성기 seed 로 재생성(`tools/gen_synth_log.py --seed 7`).
+> 학습 데이터(`data/`)는 저장소에 포함(2026-10-25부터). 합성은 생성기 seed 로도 재생성 가능(`tools/gen_synth_log.py --seed 7`).
 
 ## 공통
 - 학습 입력: `data/synth_features.csv` (= `gen_synth_log.py --minutes 240 --normal-users 8 --repeat 2 --seed 7`)
