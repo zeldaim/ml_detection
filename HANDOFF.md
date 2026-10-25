@@ -1,7 +1,14 @@
 # 이어가기 (HANDOFF) — 현재 상태와 다음 할 일
 
-> 다음에 작업을 이어갈 때 **여기부터 읽는다.** 마지막 업데이트: 2026-10-25.
+> 다음에 작업을 이어갈 때 **여기부터 읽는다.** 마지막 업데이트: 2026-10-26.
 > 빠른 복귀: `pip install -r requirements.txt` → `bash run_demo.sh` → 아래 "다음 할 일".
+
+## 0000. 저장 모델로 처음 보는 공격 탐지 정리 (2026-10-26)
+
+- **`docs/30`**: "joblib + 로그만 있으면 되나?" → 아니다. 피처 추출·구간 길이·피처셋·rel 계산·같은 sklearn이 함께 필요. 실행 경로는 `ingest.py`(권장)·수동·consumer
+- `consumer.py`: AE 누락(IF·LOF만) → IF|LOF|AE, v3.1의 rel_*를 0으로 채우던 것 → 멈추고 안내
+- `predict.py --block-file`: 이상 출발지를 `ML_ANOMALY srcip=` 형식으로 기록 (Active Response는 아직 미연결)
+- 남은 것: 새 IP의 rel_* 기준선(self는 공격만 하는 새 IP에서 배수≈1) — `docs/27` §7·`MODEL_CARD` §7
 
 ## 000. 외부 로그 투입구 (2026-10-25)
 

@@ -18,7 +18,7 @@ alerts / archives / access.log ─▶ features.py ─▶ 피처 CSV ─▶ model
 | `evaluate.py` | 정답지로 구간 단위·IP 단위 TP/FP/FN/TN, Precision/Recall/F1, 공격별 탐지 여부 |
 | `supervised.py` | **지도(Random Forest) vs 비지도(Isolation Forest · LOF)** 비교 — 공격 사건·종류를 하나씩 빼고 학습해 "아는 공격 / 처음 보는 공격" 탐지율과 정상 오탐률 비교. IF\|LOF(OR)·IF&LOF(AND)·RF 조합과 "IF가 놓치고 LOF가 잡은 구간 수"도 집계 (`docs/12`) |
 | `train_export.py` | **학습된 모델을 .joblib로 저장** — 정상 데이터로 IF·LOF, 정답지 있으면 RF까지 학습해 스케일러·피처순서·설정과 함께 묶어 저장 (배포·인수인계용) |
-| `predict.py` | 저장된 .joblib를 불러 **학습 없이** 새 피처에 IF·LOF·RF 판정 |
+| `predict.py` | 저장된 .joblib를 불러 **학습 없이** 새 피처에 IF·LOF·AE·RF 판정. `--block-file`로 이상 출발지 기록(차단 연계용, 아직 미연결 — `docs/30`) |
 | `classify_type.py` | **RF 다중 분류** — 공격 종류(normal/brute_fast/bola…)를 이름까지 맞히는지. 사건 하나씩 빼고 예측 → 종류 정확도·혼동행렬. 비지도는 발견, RF는 종류 분류 (`docs/12` §6-2) |
 | `explain_llm.py` | 한 방법의 이상 점수 상위 N개 구간을 **숫자 요약**(피처 값 + 평소 중앙값 + 다른 방법 일치 여부)으로 LLM에 보내 block_30m / observe / ignore 추천과 이유를 받음 |
 

@@ -49,6 +49,11 @@ def main():
 
     bundle = joblib.load(args.model)
     cols = bundle["features"]
+    # 여기서 만드는 건 WEB_FEATURES뿐 — 그 밖의 열(예: v3.1의 rel_*)을 0으로 채우면 에러 없이 틀린 판정이 나온다
+    missing = [c for c in cols if c not in WEB_FEATURES]
+    if missing:
+        sys.exit(f"이 소비자가 못 만드는 피처: {missing} — rel_* 모델은 ml/ingest.py(또는 relative_features → predict)로, "
+                 f"여기엔 9피처 모델(models/model.joblib)을 쓴다 (MODEL_CARD 한계 표)")
     win_sec = int(args.window * 60)
     seen = set()  # 이미 경보한 (ip, window_start) — 중복 방지
     print(f"소비자 시작 · 모델 {args.model} (학습 {bundle['trained_at']}, contamination {bundle['contamination']})")
@@ -63,14 +68,18 @@ def main():
                 continue
             if ws + win_sec > now:
                 continue  # 아직 안 끝난 구간은 건너뜀(다음 주기에 완성되면 처리)
-            X = np.array([[float(feat.get(c, 0)) for c in cols]])
+            X = np.array([[float(feat[c]) for c in cols]])
+            Xs = bundle["scaler"].transform(X)
             if_flag = bundle["iforest"].predict(X)[0] == -1
-            lof_flag = bundle["lof"].predict(bundle["scaler"].transform(X))[0] == -1
+            lof_flag = bundle["lof"].predict(Xs)[0] == -1
+            ae_flag = False   # predict.py와 같은 판정 = IF|LOF|AE (v2 이후 번들엔 AE가 있음)
+            if bundle.get("autoencoder") is not None:
+                ae_flag = float(((bundle["autoencoder"].predict(Xs) - Xs) ** 2).mean()) >= bundle["ae_threshold"]
             seen.add((ip, ws))
-            if if_flag or lof_flag:
+            if if_flag or lof_flag or ae_flag:
                 rf = bundle["rf"].predict(X)[0] if bundle["rf"] is not None else ""
                 wstart = datetime.fromtimestamp(ws, timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-                models = "+".join([m for m, f in (("IF", if_flag), ("LOF", lof_flag)) if f])
+                models = "+".join([m for m, f in (("IF", if_flag), ("LOF", lof_flag), ("AE", ae_flag)) if f])
                 msg = f"🚨 {wstart} {ip:<16} 이상({models})" + (f" · RF분류={rf}" if rf else "")
                 print(msg, flush=True)
                 new_alerts.append({"window_start": wstart, "ip": ip, "models": models,

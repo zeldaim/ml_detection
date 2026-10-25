@@ -6,11 +6,17 @@
 사용:
   python ml/predict.py models/model.joblib data/features_new.csv
   python ml/predict.py models/model.joblib data/features_new.csv --out data/pred.csv
+  python ml/predict.py models/model.joblib data/features_new.csv --block-file data/ml_block.log
+
+--block-file: 이상 구간의 출발지를 "ML_ANOMALY srcip=<IP> ..." 한 줄씩 덧붙인다 (detector/wazuh_ml_detect.py와 같은 형식).
+  아직 어디에도 연결하지 않았다 — 나중에 Wazuh localfile·룰·Active Response(docs/01)나 SOAR(docs/04)가
+  이 파일을 읽으면 차단으로 이어진다. 그 전까지는 경보 기록일 뿐이다.
 """
 import argparse
 import csv
 import os
 import sys
+from datetime import datetime, timezone
 
 
 def main():
@@ -20,6 +26,7 @@ def main():
     ap.add_argument("model", help="train_export.py가 만든 .joblib")
     ap.add_argument("features", help="판정할 피처 CSV")
     ap.add_argument("--out", help="판정 결과 CSV 저장(선택)")
+    ap.add_argument("--block-file", help="이상 출발지 기록 파일(선택, 차단 연계용 — 아직 미연결)")
     args = ap.parse_args()
 
     import joblib
@@ -73,6 +80,15 @@ def main():
             w.writeheader()
             w.writerows(out)
         print(f"저장: {args.out}")
+    flagged = [o for o in out if o["anomaly"]]
+    if args.block_file and flagged:
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+        with open(args.block_file, "a", encoding="utf-8") as f:
+            for o in flagged:
+                models = "+".join(m for k, m in (("iforest", "IF"), ("lof", "LOF"), ("autoencoder", "AE")) if o[k])
+                f.write(f"{now} ML_ANOMALY srcip={o['ip']} window={o['window_start']} models={models}"
+                        + (f" rf={o['rf_class']}" if o["rf_class"] else "") + "\n")
+        print(f"경보 {len(flagged)}개 기록: {args.block_file}")
 
 
 if __name__ == "__main__":
