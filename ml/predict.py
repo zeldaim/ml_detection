@@ -28,6 +28,8 @@ def main():
     b = joblib.load(args.model)
     cols = b["features"]
     rows = list(csv.DictReader(open(args.features, encoding="utf-8")))
+    if not rows:
+        sys.exit(f"피처 CSV 가 비어 있음(0행): {args.features} — 앞 단계(로그 파싱) 출력 확인")
     missing = [c for c in cols if c not in rows[0]]
     if missing:
         sys.exit(f"피처 CSV에 없는 열: {missing} — 학습 때와 같은 피처가 필요")
