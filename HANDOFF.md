@@ -3,6 +3,12 @@
 > 다음에 작업을 이어갈 때 **여기부터 읽는다.** 마지막 업데이트: 2026-10-26.
 > 빠른 복귀: `pip install -r requirements.txt` → `bash run_demo.sh` → 아래 "다음 할 일".
 
+## 000000. API Gateway 를 둘 때 원래 IP 보존 (2026-10-26)
+
+- **`docs/29` §7**: 게이트웨이는 리버스 프록시 → 뒤쪽 로그엔 게이트웨이 IP 하나만 → `features.py`(첫 칸 IP = 출발지)가 모든 사용자를 한 출발지로 합침
+- 결정: **게이트웨이 access log 를 ML 주 입력으로 수집**(첫 L7 지점), 뒤쪽 nginx 는 `real_ip`(게이트웨이 IP 만 신뢰)로 원래 IP 복원해 교차 확인·WAF 용
+- `X-Forwarded-For` 위조 주의, 뒤쪽은 게이트웨이에서 온 연결만 허용. 게이트웨이는 BOLA 소유권 검사를 못 함(앱 몫). **설계만, 랩 미도입**
+
 ## 00000. WAF 층 설계 (2026-10-26)
 
 - **`docs/31`**: 웹 VM nginx 에 ModSecurity + OWASP CRS. `DetectionOnly` → 오탐 예외 → 차단 순서. FortiGate=경계, ModSecurity=HTTP 내용 검사
