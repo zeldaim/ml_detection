@@ -54,6 +54,7 @@ inbox/company_a/
 | node_exporter 스냅샷 폴더 | `<폴더>/<호스트>/<epoch>.prom` | 호스트 |
 | **이미 뽑은 피처 CSV** | 헤더 `ip,window_start,…` + 피처셋 열 | 웹/DB/호스트 (예: DB 서버에서 `db_features.py` 로 만든 CSV 만 받은 경우) |
 | 정답지 CSV | 헤더 `attack_id,src,start,end,type` 또는 `ip,label,type` | 채점용 |
+| **그 밖의 웹 요청 로그** (Gateway JSON·FortiWeb syslog·CSV 내보내기·IIS 등) | 위 형식이 아니면 **공통 요청 형식으로 읽히는지 시험** (`normalize/README.md`). 필드 이름이 다르면 `meta.json` 의 `fields` | 웹 (nginx/archives 가 같이 있으면 안 씀 — 이중 집계 방지) |
 
 - 정답지가 계층마다 다르면 이름에 `web`/`db`/`host` 를 넣는다(`answer_web.csv`, `answer_db.csv`). 하나뿐이면 아무 이름이나.
 - Wazuh `alerts.json` 은 안 쓴다(룰에 걸린 것만 — 학습은 전체인 archives, `docs/08` §2-4).
@@ -70,6 +71,7 @@ inbox/company_a/
 ```
 - **`owned_paths` 는 다른 앱이면 거의 필수.** BOLA 신호(`uniq_objects`)는 "주인만 봐야 하는 자원" 경로만 센다. 기본값은 Juice Shop 경로라서 다른 앱에선 0 이 된다.
 - `window` 분 단위 구간, `contamination` 정상 중 이상으로 볼 비율(경계).
+- 공통 요청 형식으로 읽는 로그용(선택): `"fields": {"user": "consumer.username"}`(필드 위치), `"tz": "+09:00"`(시간대 없는 시각), `"trusted_proxies": ["10.16.1.2"]`(XFF 복원) — `normalize/README.md` §3.
 
 ## 5. 어느 모드를 쓰나
 

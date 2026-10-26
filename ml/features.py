@@ -200,6 +200,22 @@ def add_nginx(path, windows, win_sec):
     return used, skipped
 
 
+def add_requests(path, windows, win_sec, key="ip"):
+    """normalize/normalize.py 의 공통 요청 JSONL. key = 묶는 기준(ip 또는 user). 기준 값이 없는 요청은 건너뜀.
+    method·status 가 비어 있으면 GET·200 으로 채운다(그 축의 피처는 0 — normalize 가 경고)."""
+    used = skipped = 0
+    for r in iter_json(path):
+        if not r.get(key) or not r.get("path") or not r.get("ts"):
+            skipped += 1
+            continue
+        ts = datetime.fromisoformat(r["ts"].replace("Z", "+00:00"))
+        add_request(windows, win_sec, {"ip": r[key], "time": ts.strftime("%d/%b/%Y:%H:%M:%S %z"),
+                                       "method": r.get("method") or "GET", "path": r["path"],
+                                       "status": r.get("status") or 200})
+        used += 1
+    return used, skipped
+
+
 def main():
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -207,6 +223,10 @@ def main():
     ap.add_argument("--alerts", action="append", default=[], help="Wazuh alerts.json (.gz 가능)")
     ap.add_argument("--archives", action="append", default=[], help="Wazuh archives.json (.gz 가능)")
     ap.add_argument("--nginx", action="append", default=[], help="nginx access.log (.gz 가능)")
+    ap.add_argument("--requests", action="append", default=[],
+                    help="공통 요청 JSONL (normalize/normalize.py 출력 — 어떤 수집 방식이든)")
+    ap.add_argument("--key", choices=["ip", "user"], default="ip",
+                    help="--requests 를 묶는 기준 (기본 ip). 출력 첫 열 이름은 호환을 위해 ip 그대로")
     ap.add_argument("--window", type=float, default=5, help="구간 길이(분), 기본 5")
     ap.add_argument("--out", required=True, help="출력 CSV")
     ap.add_argument("--owned-path", action="append", default=[],
@@ -218,10 +238,10 @@ def main():
         if bad:   # Git Bash 는 /로 시작하는 인자를 C:/Program Files/Git/... 로 바꾼다 → uniq_objects 가 조용히 0
             ap.error(f"--owned-path 는 /로 시작해야 함: {bad} — Git Bash 라면 MSYS_NO_PATHCONV=1 을 앞에 붙이거나 PowerShell 에서 실행")
         OWNED_PREFIXES[:] = args.owned_path
-    if not (args.alerts or args.archives or args.nginx):
-        ap.error("--alerts / --archives / --nginx 중 하나는 필요")
-    if args.archives and args.nginx:
-        ap.error("--archives와 --nginx는 같은 요청을 두 번 세게 되므로 하나만")
+    if not (args.alerts or args.archives or args.nginx or args.requests):
+        ap.error("--alerts / --archives / --nginx / --requests 중 하나는 필요")
+    if sum(map(bool, (args.archives, args.nginx, args.requests))) > 1:
+        ap.error("--archives·--nginx·--requests 는 같은 요청을 두 번 세게 되므로 하나만")
 
     win_sec = int(args.window * 60)
     windows = defaultdict(Window)
@@ -233,8 +253,11 @@ def main():
     for p in args.nginx:
         used, skipped = add_nginx(p, windows, win_sec)
         print(f"{p}: nginx 요청 {used}줄 사용" + (f", 형식이 다른 줄 {skipped}개 건너뜀" if skipped else ""))
+    for p in args.requests:
+        used, skipped = add_requests(p, windows, win_sec, args.key)
+        print(f"{p}: 요청 {used}건 사용 (키={args.key})" + (f", {args.key} 없는 요청 {skipped}건 건너뜀" if skipped else ""))
 
-    has_web = bool(args.archives or args.nginx)
+    has_web = bool(args.archives or args.nginx or args.requests)
     cols = (ALERT_FEATURES if args.alerts else []) + (WEB_FEATURES if has_web else [])
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as f:

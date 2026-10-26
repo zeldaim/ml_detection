@@ -12,7 +12,7 @@ alerts / archives / access.log ─▶ features.py ─▶ 피처 CSV ─▶ model
 
 | 파일 | 역할 |
 |---|---|
-| `features.py` | 로그 → IP × 구간 피처 표. alerts는 룰 알럿 피처, archives·nginx는 웹 요청 피처. `.gz`도 읽음 |
+| `features.py` | 로그 → IP × 구간 피처 표. alerts는 룰 알럿 피처, archives·nginx는 웹 요청 피처. `.gz`도 읽음. **`--requests`**: 공통 요청 JSONL(`normalize/`, 어떤 수집 방식이든) + `--key ip|user` |
 | `relative_features.py` | (선택) **UEBA 상대 피처** — 출발지의 '평소 대비 배수' `rel_*` 열 추가(self/expanding/peer). features와 models 사이에 끼움. 절대 속도로 못 잡는 **자기 대비 급변(탈취형)**을 잡음 (`docs/21` §K). models·supervised 가 열을 자동 인식해 그대로 피처로 씀 |
 | `models.py` | 같은 피처 표로 **룰 비교군**(레이트리밋 / Wazuh 레벨 10+) · Z-score(robust) · Isolation Forest · LOF · One-Class SVM · Autoencoder 실행, 점수는 모두 "클수록 이상". 피처 열은 ip/window_start 뺀 전부 자동(= rel_* 포함) |
 | `evaluate.py` | 정답지로 구간 단위·IP 단위 TP/FP/FN/TN, Precision/Recall/F1, 공격별 탐지 여부 |

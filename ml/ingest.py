@@ -42,6 +42,8 @@ sys.path.insert(0, HERE)
 from evaluate import load_answer  # noqa: E402
 from feature_spec import columns  # noqa: E402
 from supervised import label_windows  # noqa: E402
+sys.path.insert(0, os.path.join(ROOT, "normalize"))
+import normalize as nz  # noqa: E402
 
 MODELS = {"web": "models/model_web_v3.1.joblib", "db": "models/db_model.joblib", "host": None}
 NGINX_RE = re.compile(r'^\S+ \S+ \S+ \[[^\]]+\] "[A-Z]+ \S+')
@@ -71,8 +73,17 @@ def head_text(path, n_bytes=4096):
         return ""
 
 
-def sniff(path):
+def as_requests(path, meta, why):
+    """고정 형식이 아니면 공통 요청 형식(normalize/)으로 읽히는지 시험. 안 되면 원래 이유를 그대로."""
+    name, _, _, rate = nz.detect(path, meta.get("fields", {}), nz.parse_tz(meta.get("tz", "+09:00")))
+    if name:
+        return "requests", f"웹 요청 로그 — 공통 형식으로 변환({name}, 앞부분 {rate:.0%} 인식)"
+    return "unknown", f"{why} (공통 요청 형식으로도 {rate:.0%}만 인식 — meta.json 의 fields 로 지정, normalize/README.md)"
+
+
+def sniff(path, meta=None):
     """파일 하나 → (종류, 설명). 내용 기준."""
+    meta = meta or {}
     text = head_text(path)
     lines = [ln for ln in text.splitlines() if ln.strip()][:20]
     if not lines:
@@ -87,7 +98,7 @@ def sniff(path):
                                 ("web", [c for c in columns("web_v1") if not c.startswith("rel_")])):
                 if set(need) <= header:
                     return f"features_{layer}", f"{LAYER_KO[layer]} 피처 CSV(이미 추출됨)"
-        return "unknown", "CSV 지만 정답지/피처 형식 아님"
+        return as_requests(path, meta, "CSV 지만 정답지/피처 형식 아님")
     if '"resultType"' in text:
         return "matrix", "Prometheus query_range JSON"
     if first.lstrip().startswith("{"):
@@ -99,15 +110,15 @@ def sniff(path):
             return "unknown", "Wazuh alerts.json — 룰에 걸린 것만이라 학습엔 archives 를 쓴다(docs/08 §2-4)"
         if "full_log" in obj:
             return "archives", "Wazuh archives.json"
-        return "unknown", "JSON 이지만 archives/Prometheus 형식 아님"
+        return as_requests(path, meta, "JSON 이지만 archives/Prometheus 형식 아님")
     if sum(bool(NGINX_RE.match(ln)) for ln in lines) >= len(lines) * 0.6:
         return "nginx", "nginx 액세스 로그(combined)"
     if any(GENERAL_RE.match(ln) for ln in lines):
         return "general", "MySQL general log"
-    return "unknown", "형식을 모름"
+    return as_requests(path, meta, "형식을 모름")
 
 
-def discover(folder):
+def discover(folder, meta=None):
     found, notes = [], []
     prom_roots = set()
     for path in sorted(glob.glob(os.path.join(folder, "**", "*"), recursive=True)):
@@ -120,7 +131,7 @@ def discover(folder):
         if name.endswith(".prom"):          # node_exporter 스냅샷: <root>/<host>/<epoch>.prom
             prom_roots.add(os.path.dirname(os.path.dirname(path)))
             continue
-        kind, desc = sniff(path)
+        kind, desc = sniff(path, meta)
         (found if kind != "unknown" else notes).append((kind, path, desc))
     for root in sorted(prom_roots):
         found.append(("snapshots", root, "node_exporter 스냅샷 폴더"))
@@ -206,12 +217,24 @@ def build_features(layer, files, run, out, meta, window):
         else:
             nginx = [p for k, p, _ in files if k == "nginx"]
             arch = [p for k, p, _ in files if k == "archives"]
-            if not (nginx or arch):
+            raw = [p for k, p, _ in files if k == "requests"]
+            if not (nginx or arch or raw):
                 return None
             if nginx and arch:
                 print("  (nginx 와 archives 가 둘 다 있음 → 같은 요청을 두 번 세지 않게 nginx 만 사용)")
+            if raw and (nginx or arch):
+                print(f"  (공통 형식 변환 대상 {len(raw)}개는 안 씀 — nginx/archives 와 같은 요청일 수 있어 이중 집계 방지)")
             src = os.path.join(out, "features_web.csv")
-            args = ["ml/features.py"] + sum([["--nginx", p] for p in nginx] or [["--archives", p] for p in arch], [])
+            if nginx or arch:
+                args = ["ml/features.py"] + sum([["--nginx", p] for p in nginx] or [["--archives", p] for p in arch], [])
+            else:
+                reqs = os.path.join(out, "requests.jsonl")
+                nargs = ["normalize/normalize.py"] + raw + ["--out", reqs, "--tz", meta.get("tz", "+09:00")]
+                nargs += sum([["--map", f"{k}={v}"] for k, v in meta.get("fields", {}).items()], [])
+                nargs += sum([["--trusted-proxy", p] for p in meta.get("trusted_proxies", [])], [])
+                if not run.step("웹 요청 로그(형식 무관) → 공통 요청 형식", nargs):
+                    return None
+                args = ["ml/features.py", "--requests", reqs]
             args += sum([["--owned-path", p] for p in meta.get("owned_paths", [])], [])
             if not run.step("웹 로그 → 출발지×구간 피처 (행위 8개)", args + w + ["--out", src]):
                 return None
@@ -393,7 +416,7 @@ def main():
     out = os.path.join(folder, "out")
     os.makedirs(out, exist_ok=True)
 
-    found, notes = discover(folder)
+    found, notes = discover(folder, meta)
     print(f"[{show(folder)}] 알아본 파일:")
     for _, p, d in found:
         print(f"  - {os.path.relpath(p, folder):<40} {d}")

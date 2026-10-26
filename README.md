@@ -113,6 +113,7 @@ python edge/edge_agent.py --kind db --log <mysql log> --collector http://<중앙
 | `edge/host_metrics.py` | **node_exporter 지표 → 호스트 피처** (Prometheus API / 저장 JSON / `/metrics` 스냅샷) |
 | `edge/` | 엣지 피처 추출(웹·DB·호스트 지표) + 중앙 collector + 출발지 귀속(`correlate.py`) |
 | `consumer/` | 단순 자동 소비자 |
+| **`normalize/`** | **어떤 웹 요청 로그든 → 공통 요청 형식** (JSON·CSV·key=value·W3C 자동 인식, 안 맞으면 설정으로). `ml/features.py --requests`·`ingest.py` 가 받음 |
 | `waf_gateway/` | **WAF + API Gateway 로그 → 사용자 키 표 + IP 키 표** (인증 후 공격은 사용자, 인증 전 공격은 IP) |
 | `tools/` | 트래픽 생성기 (정상·공격·DB·호스트 지표 합성) |
 | `models/` | 학습된 모델 + `archive/`(이전 버전) + 체인지로그 |
