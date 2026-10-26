@@ -62,6 +62,14 @@ pip install -r requirements.txt
 bash run_demo.sh          # (Windows PowerShell: ./run_demo.ps1)
 ```
 
+**깨끗한 환경에서 검증 (Docker)** — 모델을 학습한 버전(Python 3.15.1 · scikit-learn 1.9.1, `requirements.txt` 고정)으로 이미지를 만들어 `verification/verify.sh` 를 돌린다:
+
+```bash
+docker build -t ml-detection .
+docker run --rm ml-detection                                                      # 환경 검사 12항목 (2026-10-27 12/12 통과)
+docker run --rm -v "$PWD/inbox:/app/inbox" ml-detection python ml/ingest.py inbox/<폴더> --retrain   # 내 로그 판정
+```
+
 `run_demo`는 합성 데이터를 만들어 → 피처 → IF·LOF·AE·RF 비교 → 채점까지 돌리고, 위 "핵심 결과"를 재생성한다. (실제 랩 로그·CSIC은 `docs/08`·`docs/14`·`docs/16` 참고.)
 
 ## 자동 수집·판정

@@ -64,6 +64,11 @@ python ml/ingest.py /tmp/ver_inbox --retrain >/tmp/ver_ingest.txt 2>&1   && grep
 grep -E "^  (웹|DB)" /tmp/ver_ingest.txt | sed 's/^/   /'
 rm -rf /tmp/ver_inbox
 
+echo "===== [7] 공통 요청 형식 (normalize/ — 수집 방식이 바뀌어도 같은 피처) ====="
+python normalize/normalize.py /tmp/ver.log --out /tmp/ver_req.jsonl >/dev/null 2>&1 \
+  && python ml/features.py --requests /tmp/ver_req.jsonl --out /tmp/ver_f2.csv >/dev/null 2>&1 \
+  && cmp -s /tmp/ver_f.csv /tmp/ver_f2.csv && ok "nginx 직접 vs 공통 형식 경유 → 피처 CSV 동일" || no "공통 형식 경유 피처가 다름 (/tmp/ver_f2.csv)"
+
 echo
 echo "===== 결과: PASS=$PASS  FAIL=$FAIL ====="
 [ "$FAIL" -eq 0 ] && echo "모든 검증 통과" || echo "실패 항목 확인 필요"
