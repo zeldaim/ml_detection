@@ -14,6 +14,7 @@
 | Wazuh | **기존 VM 을 manager 전용으로**(indexer·dashboard 끔), RAM 2GB | Shuffle 연동은 manager 의 `wazuh-integratord` 가 직접 한다(인덱서 불필요). ML 은 `archives.json` 파일을 읽음 |
 | MySQL general log | **Wazuh 로 보내지 않음.** DB VM 안에서 `db_features.py` 로 숫자만 | 쿼리 원문 = 개인정보(`edge/` 원칙) · 여러 줄 쿼리 쪼개짐 · 양 |
 | Shuffle | **이번 바퀴엔 안 띄움.** 연동 지점만 정해 둠(§6) | 자체 OpenSearch 로 무거움. 메모리 예산 밖 |
+| WAF | **웹 VM nginx 에 ModSecurity + OWASP CRS, `DetectionOnly` 로 시작**(§4-3-1, `docs/31`) | API 보안 구성에 L7 방어 층 필요 · 인젝션은 WAF, BOLA·흐름 남용은 앱+ML · 탐지 전용이면 ML 입력이 기존과 같음 |
 
 ## 1. 토폴로지
 
@@ -23,6 +24,7 @@
 [Kali]  공격자 ──── HTTP ────▶ [웹 VM 10.16.1.10]  Rocky 9
                                  nginx :80   → Juice Shop (127.0.0.1:3000)
                                  nginx :8080 → shopapi (PHP-FPM, 직접 만든 쇼핑몰 API)
+                                 └ 두 server 모두 ModSecurity(CRS) — WAF 층 (docs/31)
                                  node_exporter :9100 · Wazuh 에이전트
                                         │ 3306 (웹 VM 에서만 허용)
                                         ▼
@@ -189,6 +191,14 @@ nginx -t && systemctl reload nginx
 curl -s http://10.16.1.10:8080/api/products | head -c 200    # 확인
 ```
 
+### 4-3-1. WAF — nginx + ModSecurity(OWASP CRS)
+
+절차·설정·운영 단계는 **`docs/31`** (§4 구축, §5 탐지→예외→차단, §8 체크리스트). 이 런북에서 지킬 것만:
+- shopapi·Juice Shop server 블록 **둘 다** `modsecurity on`. 처음엔 **`SecRuleEngine DetectionOnly`**
+- 정상 수집·공격 실험·평가 동안 **WAF 모드·CRS 버전·예외 파일을 바꾸지 않는다**(바꾸면 재학습, `docs/31` §6)
+- 의도된 SQLi 지점 `/api/search?q=` 는 예외 처리하지 않는다 (WAF가 막는 것 데모)
+- 웹 VM 메모리: CRS 적재 후 nginx RSS 기록, 부족하면 2.5GB
+
 ### 4-4. node_exporter — 웹 VM·DB VM 둘 다
 ```bash
 VER=1.8.2   # 설치 시점의 릴리스로 고정하고 이 문서에 기록
@@ -254,6 +264,7 @@ cd C:\prometheus
 [ ] Wazuh: manager 만 Up, 1514/1515 열림, logall_json=yes, VM 2GB
 [ ] DB VM: mysqld 동작, 웹 VM→3306 성공 / Kali→3306 실패
 [ ] shopapi: schema·seed 적재, /api/products 응답, 로그인 후 shopapi_access.log 의 2번째 칸에 사용자 id 기록
+[ ] WAF: 두 server modsecurity on(DetectionOnly), /api/search SQLi 흉내 → modsec_audit.log 에 942xxx (docs/31 §8)
 [ ] node_exporter: 두 VM, 분석 PC 에서 :9100/metrics 응답 / 다른 곳에선 차단
 [ ] Wazuh 에이전트: 두 VM Active, archives.json 에 nginx 줄 유입
 [ ] Prometheus: targets 2개 UP

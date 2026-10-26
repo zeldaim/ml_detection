@@ -3,6 +3,13 @@
 > 다음에 작업을 이어갈 때 **여기부터 읽는다.** 마지막 업데이트: 2026-10-26.
 > 빠른 복귀: `pip install -r requirements.txt` → `bash run_demo.sh` → 아래 "다음 할 일".
 
+## 00000. WAF 층 설계 (2026-10-26)
+
+- **`docs/31`**: 웹 VM nginx 에 ModSecurity + OWASP CRS. `DetectionOnly` → 오탐 예외 → 차단 순서. FortiGate=경계, ModSecurity=HTTP 내용 검사
+- 인젝션(SQLi·XSS·LFI·RCE)은 WAF, BOLA·흐름 남용은 앱 권한 검사 + ML. WAF 결과는 ML 피처로 안 넣고 비교용
+- ML 데이터 규칙: WAF 모드·CRS 버전·예외 파일을 실험 메타에 기록, 바꾸면 재학습. 이번 실측 바퀴는 `DetectionOnly` 권장
+- `docs/28` §0·§1·§4-3-1·§4-7, `docs/26` §1·§2 에 자리 반영. **랩 미설치**(버전은 `docs/31` §9 에 설치 때 기록)
+
 ## 0000. 저장 모델로 처음 보는 공격 탐지 정리 (2026-10-26)
 
 - **`docs/30`**: "joblib + 로그만 있으면 되나?" → 아니다. 피처 추출·구간 길이·피처셋·rel 계산·같은 sklearn이 함께 필요. 실행 경로는 `ingest.py`(권장)·수동·consumer
