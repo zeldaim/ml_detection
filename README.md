@@ -92,7 +92,7 @@ python edge/edge_agent.py --kind db --log <mysql log> --collector http://<중앙
 | 계획 | `docs/07`(메인 컨셉), `docs/08`(환경 구축), `docs/10`(7~8주차 파이프라인) |
 | **결과** | **`docs/13`(종합 결과)** — 웹·DB 2계층, 2층 구조 결론 |
 | 심화 | `docs/14`(실제 MySQL 재검증), `docs/15`(API 공격·피처 카탈로그), `docs/16`(레퍼런스) |
-| **확정** | **`docs/27`(피처셋 v1 확정 + node_exporter 입구)**, **`docs/28`(랩 확장: DB VM·Prometheus·Wazuh 배치 런북)**, **`docs/29`(로그 수집·저장 결정과 비교)**, **`models/MODEL_CARD.md`(모델 카드)**, `docs/26`(탐지 아키텍처), **`docs/30`(저장 모델로 처음 보는 공격 탐지 — 필요한 것·주의)**, **`docs/31`(WAF 층 — ModSecurity·CRS, WAF가 잡는 것/못 잡는 것)** |
+| **확정** | **`docs/27`(피처셋 v1 확정 + node_exporter 입구)**, **`docs/28`(랩 확장: DB VM·Prometheus·Wazuh 배치 런북)**, **`docs/29`(로그 수집·저장 결정과 비교)**, **`models/MODEL_CARD.md`(모델 카드)**, `docs/26`(탐지 아키텍처), **`docs/30`(저장 모델로 처음 보는 공격 탐지 — 필요한 것·주의)**, **`docs/31`(WAF 층 — ModSecurity·CRS, WAF가 잡는 것/못 잡는 것)**, **`docs/32`(피처 선택 원칙 — 공격별이 아니라 축별, 많을수록 좋지 않은 이유, 엣지는 DB 에만)** |
 | 기록 | `docs/09`(설계 논의 히스토리), **`docs/17`(검증 함정·디버깅 로그)**, `models/README.md`(모델 체인지로그) |
 | 그림 | **`docs/18`(토폴로지·다이어그램 — draw.io 밑그림)** |
 | 공부 | `learn/`(내 데이터로 배우는 pandas·ML) |
