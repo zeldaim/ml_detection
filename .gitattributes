@@ -1,2 +1,4 @@
 *.sh text eol=lf
 *.py text eol=lf
+# 리눅스 컨테이너·VM 에서 도는 파일은 Windows 체크아웃(autocrlf)에서도 LF 유지 — CRLF 면 bash 가 \r 때문에 실패
+Dockerfile text eol=lf

@@ -1,0 +1,17 @@
+# 이미지에 넣지 않는 것 — 크고, 실행에 필요 없고, 일부는 민감(inbox)
+.git
+.omc
+**/__pycache__
+*.pyc
+.venv
+data
+data!
+data_old
+inbox/*
+!inbox/README.md
+ml_detection
+models/archive
+models/experiments
+models/_retrained
+deploy/collect/certs
+*.drawio.svg

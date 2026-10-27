@@ -1,0 +1,13 @@
+ip,label,type
+10.16.1.211,attack,brute_fast
+10.16.1.212,attack,brute_fast
+10.16.1.213,attack,bola
+10.16.1.214,attack,bola
+10.16.1.221,attack,brute_fast
+10.16.1.222,attack,brute_slow
+10.16.1.223,attack,harvest
+10.16.1.224,attack,user_enum
+10.16.1.225,attack,scanning
+10.16.1.226,attack,bola_fast
+10.16.1.227,attack,bola_slow
+10.16.1.228,attack,harvest_slow

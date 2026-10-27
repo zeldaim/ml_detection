@@ -1,7 +1,7 @@
 # 실험 모델 버전 기록 (플라이휠)
 
 > 최종만 남기지 않고 **설정별·바퀴별로 전부 보존**한다. 각 모델은 재현 가능(같은 데이터·seed).
-> 학습 데이터(`data/`)는 gitignore라 저장소엔 없음 — 생성기 seed 로 재생성(`tools/gen_synth_log.py --seed 7`).
+> 학습 데이터(`data/`)는 저장소에 포함(2026-10-25부터). 합성은 생성기 seed 로도 재생성 가능(`tools/gen_synth_log.py --seed 7`).
 
 ## 공통
 - 학습 입력: `data/synth_features.csv` (= `gen_synth_log.py --minutes 240 --normal-users 8 --repeat 2 --seed 7`)
@@ -48,10 +48,12 @@ UEBA는 웹 §K 코드 전이. 출발지 귀속만 실제 필요. 운영후보 L
 
 ## ★ 현재 최선 모델 (운영 후보, 2026-10-25)
 
-**`models/model_web_v3_canon_rel.joblib`** — 웹 정본(real_canon 246구간) + **UEBA 상대피처(rel_*) 포함(11피처)**.
-- 성능: **IF|LOF|AE 0.97 / 오탐 0.00**(c0.05). rel 추가로 앙상블 0.88→0.97(§J·K·L 반영).
-- 재현: `datasets/real_web/` + `relative_features.py` → `train_export.py`.
-- experiments/ 의 이전 모델들은 실험 기록용. **배포 후보는 이 v3.**
+**`models/model_web_v3.1.joblib`** — 웹 정본 정상 214구간 + 피처셋 **`web_v1`**(10피처, ssh_fail 제외). 카드: `models/MODEL_CARD.md`.
+- 성능(처음 보는 데이터, seed 10개): **IF|LOF|AE 0.91±0.04 · LOF 0.88 · 평가 정상 오탐 0/65**(c0.05).
+- ⚠ 이전 v3(`model_web_v3_canon_rel.joblib`, 0.97 로 기록)은 **정정**: 0.97 은 AE seed 하나의 값, 번들은 `train_export.py` 버그로
+  **공격 32구간을 정상으로 학습**(n_normal 246) → `archive/model_web_v3_canon_rel_trained-with-attacks.joblib` 로 보관. 상세 `docs/27` §4.
+- 재현: `datasets/real_web/` + `relative_features.py` → `train_export.py --feature-set web_v1`(`docs/27` §6).
+- experiments/ 의 이전 모델들은 실험 기록용. **배포 후보는 이 v3.1.**
 
 ## 다음 버전 규칙
 - 새 바퀴: `model_<데이터셋>_<설정>_v<n>.joblib` 로 저장 + 이 표에 행 추가(설정·지표·해석).

@@ -1,0 +1,5 @@
+ip,label,type
+10.16.1.211,attack,brute_fast
+10.16.1.212,attack,brute_fast
+10.16.1.213,attack,bola
+10.16.1.214,attack,bola

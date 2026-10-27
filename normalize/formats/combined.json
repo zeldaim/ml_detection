@@ -1,0 +1,6 @@
+{
+  "name": "combined",
+  "about": "nginx/Apache combined. 3번째 칸 = 사용자(없으면 -). 끝에 \"XFF\" request_id 두 칸이 붙어도 읽는다 (waf_gateway/README.md §3-1)",
+  "pattern": "^(?P<ip>\\S+) \\S+ (?P<user>\\S+) \\[(?P<ts>[^\\]]+)\\] \"(?P<request>[^\"]*)\" (?P<status>\\d{3}) \\S+(?: \"[^\"]*\" \"[^\"]*\"(?: \"(?P<xff>[^\"]*)\" (?P<request_id>\\S+))?)?",
+  "time_format": "%d/%b/%Y:%H:%M:%S %z"
+}

@@ -1,0 +1,27 @@
+# 랩 웹 VM(10.16.1.10) Filebeat — nginx 액세스 로그를 ML PC Logstash 로.  (docs/29 §3)
+# 설치 후 /etc/filebeat/filebeat.yml 로 복사.  검사: filebeat test config && filebeat test output
+#
+# fields.source   = 출처(폴더 1단계)    → inbox/live/lab/
+# fields.log_type = 로그 종류(2단계)    → inbox/live/lab/nginx_shopapi/
+# 앱마다 log_type 을 나눠야 ingest 가 앱별로 따로 판정한다(소유 자원 경로가 앱마다 다름).
+
+filebeat.inputs:
+  - type: filestream
+    id: nginx-shopapi
+    paths: ["/var/log/nginx/shopapi_access.log"]
+    fields: {source: lab, log_type: nginx_shopapi}
+  - type: filestream
+    id: nginx-juiceshop
+    paths: ["/var/log/nginx/juiceshop_access.log"]
+    fields: {source: lab, log_type: nginx_juiceshop}
+
+# 원문만 보내면 되므로 메타데이터 수집기는 끈다(가벼움)
+processors: []
+
+output.logstash:
+  hosts: ["10.16.1.1:5044"]
+  ssl.certificate_authorities: ["/etc/filebeat/certs/ca.crt"]
+  ssl.certificate: "/etc/filebeat/certs/web01.crt"   # make_certs.sh client web01
+  ssl.key: "/etc/filebeat/certs/web01.key"
+
+# ML PC 가 꺼져 있어도 재시도하며 기다린다(파일 위치는 registry 에 기억 → 이어서 전송)

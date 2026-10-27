@@ -2,9 +2,15 @@ __pycache__/
 *.pyc
 .venv/
 .omc/
-data/
+# 외부 인프라 로그 투입구 — 사용법 README 만 커밋
+inbox/*
+!inbox/README.md
+# 수집용 TLS 인증서·키 (make_certs.sh 결과) — 절대 커밋 금지
+deploy/collect/certs/
 
 # 엣지 적재 스풀
 edge/spool*.jsonl
 data_old/
 data!/
+# retrain_2026-10-25.sh 기본 출력(원본 대조용 재학습본)
+models/_retrained/

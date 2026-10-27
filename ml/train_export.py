@@ -21,9 +21,16 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
-def load_features(path, drop):
+def load_features(path, drop, feature_set=None):
     rows = list(csv.DictReader(open(path, encoding="utf-8")))
-    cols = [c for c in rows[0] if c not in ("ip", "window_start") and c not in drop]
+    if feature_set:
+        from feature_spec import columns
+        cols = columns(feature_set)
+        missing = [c for c in cols if c not in rows[0]]
+        if missing:
+            sys.exit(f"피처셋 {feature_set} 에 필요한 열이 CSV에 없음: {missing}")
+    else:
+        cols = [c for c in rows[0] if c not in ("ip", "window_start") and c not in drop]
     import numpy as np
     X = np.array([[float(r[c] or 0) for c in cols] for r in rows])
     return rows, cols, X
@@ -36,6 +43,7 @@ def main():
     ap.add_argument("--window", type=float, default=5)
     ap.add_argument("--contamination", type=float, default=0.05, help="IF·LOF 이상 비율 (정상 로그로 정한 값)")
     ap.add_argument("--drop", nargs="*", default=[])
+    ap.add_argument("--feature-set", help="피처 확정 목록 이름(ml/feature_spec.py, 예: web_v1). 주면 그 열만·그 순서로 학습")
     ap.add_argument("--out", default="models/model.joblib")
     args = ap.parse_args()
 
@@ -46,26 +54,32 @@ def main():
     from sklearn.neural_network import MLPRegressor
     from sklearn.preprocessing import StandardScaler
 
-    rows, cols, X = load_features(args.features, args.drop)
+    if args.feature_set and args.drop:
+        ap.error("--feature-set 과 --drop 은 함께 못 씀 — 확정 셋에서 빼려면 feature_spec.py 에 새 셋을 추가")
+    rows, cols, X = load_features(args.features, args.drop, args.feature_set)
 
     # 이상탐지 모델: 정답지가 있으면 '정상'으로 라벨된 구간만으로 학습(기준=평소), 없으면 전체를 정상으로 간주
     normal_mask = np.ones(len(rows), dtype=bool)
     labels = None
     if args.answer:
+        # supervised.py 와 같은 라벨 함수 — 시간구간형·IP형 정답지 둘 다 처리.
+        # (이전 구현은 IP형(start 없음)을 무시해 공격 구간까지 '정상'으로 학습했다 → v3 결함, docs/27 §4)
         from datetime import timedelta
-        from evaluate import load_answer, parse_utc
+        from evaluate import load_answer
+        from supervised import label_windows
         attacks = load_answer(args.answer)
-        win = timedelta(minutes=args.window)
-        labels = []
-        for i, r in enumerate(rows):
-            ws = parse_utc(r["window_start"])
-            typ = "normal"
-            for src, start, end, t in attacks:
-                if src == r["ip"] and start and ws < end and ws + win > start:
-                    typ = t or "attack"
-                    break
-            labels.append(typ)
-            normal_mask[i] = (typ == "normal")
+        hits = label_windows(rows, attacks, timedelta(minutes=args.window))
+        labels = [h[1] if h else "normal" for h in hits]
+        normal_mask = np.array([h is None for h in hits])   # supervised.py 와 같게: 정답지에 있으면 공격(type 이름 무관)
+        if normal_mask.all():
+            sys.exit("정답지의 공격이 피처 표의 어떤 구간과도 맞지 않음 — ip/시각/--window 확인")
+        matched = {h[0] for h in hits if h}
+        present = {r["ip"] for r in rows}   # 이 표에 없는 출발지(예: 다른 호스트의 공격)는 대상 아님
+        ids = [f"{src}#{i}" if start is not None else src
+               for i, (src, start, _, _) in enumerate(attacks) if src in present]
+        unmatched = [a for a in ids if a not in matched]
+        if unmatched:   # 일부만 안 맞아도 그 공격은 '정상'으로 학습된다 → 숨기지 않고 알린다
+            print(f"경고: 정답지 {len(ids)}건 중 {len(unmatched)}건이 어떤 구간과도 안 맞음(정상으로 학습됨): {unmatched[:5]}")
 
     Xn = X[normal_mask]
     if len(Xn) < 5:
@@ -83,6 +97,7 @@ def main():
 
     bundle = {
         "features": cols,                 # 입력 피처 순서 (예측 때 똑같이 맞춰야 함)
+        "feature_set": args.feature_set,  # 확정 피처셋 이름(ml/feature_spec.py). 없으면 임의 열 조합
         "contamination": args.contamination,
         "scaler": scaler,
         "iforest": iso,

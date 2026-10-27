@@ -1,0 +1,2 @@
+attack_id,src,start,end,type
+ueba#0,10.16.2.203,2026-10-25T00:20:00Z,2026-10-25T00:40:00Z,takeover
