@@ -174,3 +174,11 @@ python edge/edge_agent.py --kind db --log <mysql log> --collector http://<중앙
 ## 관련
 
 - [zeldaim/finance_secure](https://github.com/zeldaim/finance_secure) — 금융권 보안사고 분석·제안서 (원 프로젝트)
+
+## 라이선스
+
+이 레포에서 **제가 작성한 코드와 문서**는 [Apache License 2.0](LICENSE) 을 따릅니다.
+
+다음은 제외합니다 (각 원저작자의 권리를 따름):
+- `data/csic/` — CSIC 2010 HTTP 데이터셋 (연구용 공개 데이터)
+- `datasets/public/` — 외부 공개 데이터셋에서 가져온 자료 (각 출처의 라이선스를 따름)
