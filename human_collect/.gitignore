@@ -1,0 +1,4 @@
+# 참가자 비밀번호·실제 수집 로그는 레포에 올리지 않는다 (변환·검토한 결과만 따로 커밋)
+participants_secret.csv
+htpasswd
+logs/

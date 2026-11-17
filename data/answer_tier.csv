@@ -1,0 +1,7 @@
+attack_id,src,start,end,type
+bola_101,db-tier,2026-10-23T06:45:00Z,2026-10-23T06:45:11Z,bola
+bola_102,db-tier,2026-10-23T06:46:41Z,2026-10-23T07:00:01Z,bola
+sqli_103,db-tier,2026-10-23T07:01:31Z,2026-10-23T07:01:46Z,sqli
+sqli_104,db-tier,2026-10-23T07:03:16Z,2026-10-23T07:03:34Z,sqli
+scrape_105,db-tier,2026-10-23T07:05:04Z,2026-10-23T07:05:20Z,scrape
+scrape_106,db-tier,2026-10-23T07:06:50Z,2026-10-23T07:07:03Z,scrape

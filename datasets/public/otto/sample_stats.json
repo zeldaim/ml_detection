@@ -1,0 +1,43 @@
+{
+  "source": "OTTO Recommender Systems Dataset, otto-recsys-train.jsonl (CC BY 4.0)",
+  "selection": "crc32(session) % 1000 < 2",
+  "sessions_read": 12899779,
+  "sessions_kept": 25960,
+  "events": 437597,
+  "ts_digits": {
+    "13": 25960
+  },
+  "ts_unit": "ms",
+  "event_types": {
+    "clicks": 392500,
+    "carts": 34611,
+    "orders": 10486
+  },
+  "events_per_session": {
+    "p10": 2,
+    "p25": 3,
+    "p50": 6,
+    "p75": 15,
+    "p90": 39,
+    "p99": 173,
+    "mean": 16.86
+  },
+  "single_event_session_ratio": 0.0,
+  "gap_seconds": {
+    "p10": 8.774,
+    "p25": 20.014,
+    "p50": 50.875,
+    "p75": 193.878,
+    "p90": 53126.743,
+    "p99": 873902.816
+  },
+  "gap_over_30min_ratio": 0.1621,
+  "session_span_seconds": {
+    "p10": 90.399,
+    "p25": 550.526,
+    "p50": 195949.571,
+    "p75": 1108256.152,
+    "p90": 1814795.598,
+    "p99": 2326192.806
+  }
+}

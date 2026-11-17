@@ -1,0 +1,31 @@
+# 실제 사람 정상 트래픽 수집용 Juice Shop  (docs/36)
+#   Juice Shop 은 일부러 취약한 앱 → 반드시 nginx 기본 인증 뒤에 두고, 수집 기간에만 띄운다.
+#   참가자마다 기본 인증 아이디(p01, p02 …)를 따로 준다 → 로그에 실제 IP 대신 참가자 ID 만 남는다.
+#
+#   실행:   docker compose up -d                       (내 PC 에서만: http://127.0.0.1:8080)
+#   외부:   docker compose --profile tunnel up -d     (임시 공개 주소 → docker compose logs tunnel 에서 https://….trycloudflare.com 확인)
+#   종료:   docker compose --profile tunnel down
+services:
+  juice:
+    # 재생 실험(docs/35)과 같은 이미지 — 버전이 다르면 경로·응답이 달라 비교가 흔들린다
+    image: bkimminich/juice-shop@sha256:877fc77b12d72b42e486eb09b6b1711cc56514306d92006b284e7e7cf076a809
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on: [juice]
+    ports:
+      - "127.0.0.1:8080:80"   # 내 PC 에서만 열림. 외부 공개는 tunnel 로만
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./htpasswd:/etc/nginx/htpasswd:ro
+      - ./logs:/var/log/nginx-human
+    restart: unless-stopped
+
+  tunnel:
+    # 계정 없이 임시 https 주소를 만든다 (주소는 실행할 때마다 바뀜). 기본 인증이 앞에 있으므로 주소가 새도 들어올 수 없다
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://nginx:80
+    depends_on: [nginx]
+    profiles: [tunnel]
+    restart: unless-stopped

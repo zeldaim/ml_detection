@@ -1,0 +1,3 @@
+attack_id,src,start,end,type
+bola_slow#0,203.0.113.10,2026-10-27T03:00:00Z,2026-10-27T04:00:00Z,bola_slow
+cred_stuffing#0,198.51.100.66,2026-10-27T03:10:00Z,2026-10-27T03:40:00Z,cred_stuffing

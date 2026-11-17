@@ -1,0 +1,33 @@
+################ 1. 빈도 룰 재현 — real_canon (소유 자원 URL 을 건드린 출발지만)
+ip           type             n  2xx uniq  max distinct: 120s(2xx) 120s(any) 600s 3600s | 5min-window uniq (sorted)
+10.16.1.213  bola            80   56   80         56        80    80    80 | [80]
+10.16.1.214  bola            80   56   80          9        10    48    80 | [12, 20, 24, 24]
+10.16.1.226  bola_fast      240  136  120         68       120   120   120 | [120, 120]
+10.16.1.227  bola_slow       80   80   40          9         9    40    40 | [4, 9, 11, 16, 20, 20]
+10.16.1.101  normal         397   27    9          4         4     6     6 | [3, 3, 3, 3, 3, 3, 3, 4]
+10.16.1.103  normal          18   18    3          3         3     3     3 | [1, 2, 3]
+10.16.1.224  user_enum      360    0   60          0        60    60    60 | [60, 60]
+
+################ 2. 빈도 룰 재현 — boost_bola_slow
+ip           type             n  2xx uniq  max distinct: 120s(2xx) 120s(any) 600s 3600s | 5min-window uniq (sorted)
+10.16.1.231  bola_slow      100    0   80          0         9    41    80 | [6, 14, 20, 20, 20, 20]
+10.16.1.232  bola_slow      100    0   80          0         9    41    80 | [6, 14, 20, 20, 20, 20]
+10.16.1.233  bola_slow      100    0   80          0         9    41    80 | [6, 14, 18, 20, 20, 20]
+10.16.1.234  bola_slow      100    0   80          0         9    41    80 | [6, 14, 20, 20, 20, 20]
+10.16.1.235  bola_slow      100    0   80          0         9    41    80 | [6, 14, 18, 20, 20, 20]
+10.16.1.236  bola_slow      100    0   80          0         9    41    80 | [6, 14, 20, 20, 20, 20]
+
+################ 3. LOF(numpy) vs uniq_objects>=5 룰 — 출발지 분할 seed 0~4
+정상 출발지 14개, 출발지 분할 seed 0~4 합계
+종류                      구간    LOF 탐지   uniq_objects>=5 룰
+bola                    25        24                  25
+bola_fast               10        10                  10
+bola_slow               30        30                  25
+bola_slow(boost)       180       180                 180
+brute_fast              25        21                   0
+brute_slow              25        25                   0
+harvest                 10        10                   0
+harvest_slow            15         3                   0
+scanning                10         8                   0
+user_enum               10        10                  10
+정상 오탐  LOF 52/356 (14.6%)   uniq_objects>=5 룰 0/356 (0.0%)
