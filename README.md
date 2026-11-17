@@ -181,4 +181,4 @@ python edge/edge_agent.py --kind db --log <mysql log> --collector http://<중앙
 
 다음은 제외합니다 (각 원저작자의 권리를 따름):
 - `data/csic/` — CSIC 2010 HTTP 데이터셋 (연구용 공개 데이터)
-- `datasets/public/` — 외부 공개 데이터셋에서 가져온 자료 (각 출처의 라이선스를 따름)
+- `datasets/public/otto/` — OTTO Recommender Systems Dataset (OTTO GmbH, CC BY 4.0) 에서 가공. 원 데이터 출처: https://github.com/otto-de/recsys-dataset
