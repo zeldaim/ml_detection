@@ -29,7 +29,7 @@ git clone https://github.com/zeldaim/ml_detection.git && cd ml_detection
 bash docs/37_결과/run.sh          # the chart above: frequency rule vs LOF vs threshold rule (numpy only)
 ```
 
-**Run a full detection lab instead:** [api-defense-lab](https://github.com/zeldaim/api-defense-lab) packages a successor of this approach (IsolationForest on per-IP windows + shadow-API rules + automatic blocking + answer key + scorer) behind one `docker compose up`.
+**Run a full detection lab instead:** [api-defense-lab](https://github.com/zeldaim/api-defense-lab) packages a related, separately built pipeline (IsolationForest on per-IP windows + shadow-API rules + automatic blocking + answer key + scorer) behind one `docker compose up`.
 
 The rest of this README is in Korean.
 
