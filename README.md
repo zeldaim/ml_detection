@@ -8,6 +8,31 @@
 > 📇 **모델 카드 = [`models/MODEL_CARD.md`](models/MODEL_CARD.md)** — `model_web_v3.1` 의 용도·한계·재현. 피처 확정 근거 `docs/27`.
 > ⚠ **현재 단계 = PoC (운영 투입 전).** 실제 랩 로그에서 처음 보는 공격 탐지 약 90%, **처음 보는 정상 사용자 오탐 10~15%** (`docs/33`·`docs/35`·`docs/37`). 2026-10 의 "오탐 0" 수치는 정정됐다(아래 "정정 기록").
 
+## English summary
+
+**What it is.** Unsupervised ML (IsolationForest · LOF · Autoencoder) that flags abnormal behaviour rules miss at the web/API layer — BOLA (reading other users' objects), slow brute force, bulk harvesting — plus a supervised RandomForest that names the attack type. Input: web access logs turned into per-source × 5-minute window features. scikit-learn only. **Stage: proof of concept, not production-ready.**
+
+![LOF vs a one-line rule](docs/img/rule_vs_lof.png)
+
+**What the numbers say (real lab logs, reproduced from a fresh clone on 2026-11-19):**
+
+- LOF catches slow BOLA that a 120-second frequency rule misses — **210 / 210** slow-BOLA windows across 7 sources.
+- But for BOLA alone, a **one-line rule (`uniq_objects ≥ 5`) does the same job with 0 false positives**. ML is not justified for BOLA by these results; its value is the attack types nobody wrote a rule for (brute force, harvesting, scanning: the rule catches 0 there).
+- **False positives on unseen normal users: 52 / 356 windows (14.6%)** — too high to run in production.
+- Slow harvesting is barely caught by any model (3 / 15).
+- An earlier "0 false positives" claim (2026-10) was wrong and is corrected below ("정정 기록").
+
+**Reproduce:**
+
+```bash
+git clone https://github.com/zeldaim/ml_detection.git && cd ml_detection
+bash docs/37_결과/run.sh          # the chart above: frequency rule vs LOF vs threshold rule (numpy only)
+```
+
+**Run a full detection lab instead:** [api-defense-lab](https://github.com/zeldaim/api-defense-lab) packages a successor of this approach (IsolationForest on per-IP windows + shadow-API rules + automatic blocking + answer key + scorer) behind one `docker compose up`.
+
+The rest of this README is in Korean.
+
 ## 한 장 요약
 
 - **문제:** WAF/룰은 "알려진 나쁜 문자열"만 막는다. 문법은 정상인데 패턴이 공격인 것(남의 주문 열람=BOLA, 느린 대입, 대량 수집)은 통과한다.
